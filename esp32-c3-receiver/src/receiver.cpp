@@ -424,7 +424,10 @@ void Receiver::sendHello()
 void Receiver::sendStatus()
 {
     int b = (int) battery.getPercentage();
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b);
+    int low = battery.isLow() ? 1 : 0;
+    int full = battery.isFull() ? 1 : 0;
+    int state = static_cast<int>(battery.getChargeState());
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, low, full, state);
 
     pendingDailyStats = true;
     send(txpacket, strlen(txpacket));
