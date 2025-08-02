@@ -9,6 +9,7 @@
 
 #include <RadioLib.h>
 #include "BatteryMonitor.h"
+#include <ArduinoOTA.h>
 
 #define RELAY_PIN 1
 
@@ -105,7 +106,7 @@ void setFlag(void) {
 
 
 
-Receiver::Receiver() 
+Receiver::Receiver()
 {
     ::instance = this;
 
@@ -120,6 +121,7 @@ Receiver::Receiver()
     ackConfirmed = true;
     lastStatusSend = 0;
     pendingDailyStats = false;
+    otaEnabled = false;
 }
 void Receiver::updateDisplay()
 {
@@ -458,6 +460,10 @@ unsigned long ackUpdateFrequency = 3000;
 
 void Receiver::loop()
 {
+    if(otaEnabled) {
+        ArduinoOTA.handle();
+    }
+
     if(mRelayState && offTime && millis() > offTime) {
         setRelayState(false);
     }
@@ -556,6 +562,24 @@ void Receiver::setSendStatusFrequency(unsigned int freq)
     Settings::setInt(KEY_RX_STATUS_FREQ, statusSendFreqSec);
 }
 
+void Receiver::connectWifi(const char *ssid, const char *pass)
+{
+    Serial.println("Connecting to WiFi for OTA");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, pass);
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+        delay(500);
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("WiFi connected, starting OTA");
+        ArduinoOTA.begin();
+        otaEnabled = true;
+    } else {
+        Serial.println("WiFi connection failed");
+    }
+}
+
 void Receiver::processReceived(char *rxpacket)
 {
     char *strings[10];
@@ -595,6 +619,10 @@ void Receiver::processReceived(char *rxpacket)
         } else if(strcasecmp(strings[2], "pwr") == 0 && index >= 4) {
             int power = atoi(strings[3]);
             setTxPower(power);
+        } else if(strcasecmp(strings[2], "wifi") == 0) {
+            const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
+            const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
+            connectWifi(ssid, pass);
         } else {
             bool newRelayState = false;
             if(strcasecmp(strings[2], "on") == 0 || strcasecmp(strings[2], "pulse") == 0) {
