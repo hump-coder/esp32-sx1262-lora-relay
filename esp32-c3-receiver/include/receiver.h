@@ -44,9 +44,7 @@ class Receiver : public Device
     // Duration to keep the relay on. This value is provided by the
     // controller in the ON message.
     unsigned int onTimeSec = 0;
-    int acksRemaining;
-    uint16_t ackStateId;
-    bool ackConfirmed;
+    uint16_t lastCommandId = 0;
     int txPower = TX_OUTPUT_POWER;
     unsigned int statusSendFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
     unsigned long lastStatusSend = 0;
@@ -55,7 +53,7 @@ class Receiver : public Device
     int lastBatteryPct = -1;
     ChargeState lastChargeState = DISCHARGING;
     int lastWifiState = WIFI_DISABLED;
-    void sendAck(char *rxpacket);
+    void sendAck(uint16_t id, const char *status);
     void setRelayState(bool newRelayState);
     void processReceived(char *rxpacket);
     void send(char *packet, size_t len);
