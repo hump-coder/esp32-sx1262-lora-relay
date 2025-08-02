@@ -726,33 +726,23 @@ void Controller::processReceived(char *rxpacket)
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'S')
         {
-            if(index >= 9) {
+            if(index >= 7) {
                 int power = atoi(strings[1]);
                 int rssi = atoi(strings[2]);
                 int snr = atoi(strings[3]);
                 bool state = atoi(strings[4]);
                 bool pulse = atoi(strings[5]);
                 int battery = atoi(strings[6]);
-                int cstate = atoi(strings[7]);
-                int wifi = atoi(strings[8]);
+
+                int cstate = -1;
+                int wifi = WIFI_DISABLED;
+                if(index >= 9) {
+                    cstate = atoi(strings[7]);
+                    wifi = atoi(strings[8]);
+                } else if(index >= 8) {
+                    wifi = atoi(strings[7]);
+                }
                 publishReceiverStatus(power, rssi, snr, state, pulse, battery, cstate, wifi);
-            } else if(index >= 8) {
-                int power = atoi(strings[1]);
-                int rssi = atoi(strings[2]);
-                int snr = atoi(strings[3]);
-                bool state = atoi(strings[4]);
-                bool pulse = atoi(strings[5]);
-                int battery = atoi(strings[6]);
-                int wifi = atoi(strings[7]);
-                publishReceiverStatus(power, rssi, snr, state, pulse, battery, -1, wifi);
-            } else if(index >= 7) {
-                int power = atoi(strings[1]);
-                int rssi = atoi(strings[2]);
-                int snr = atoi(strings[3]);
-                bool state = atoi(strings[4]);
-                bool pulse = atoi(strings[5]);
-                int battery = atoi(strings[6]);
-                publishReceiverStatus(power, rssi, snr, state, pulse, battery, -1, WIFI_DISABLED);
             }
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'D')

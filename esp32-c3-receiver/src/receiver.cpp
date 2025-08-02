@@ -430,21 +430,18 @@ void Receiver::sendStatus()
     int b = (int) battery.getPercentage();
     int state = static_cast<int>(battery.getChargeState());
     int wifi = WIFI_DISABLED;
-    if (WiFi.getMode() != WIFI_MODE_NULL)
+    wl_status_t st = WiFi.status();
+    if (st == WL_CONNECTED)
     {
-        wl_status_t st = WiFi.status();
-        if (st == WL_CONNECTED)
-        {
-            wifi = WIFI_CONNECTED;
-        }
-        else if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS)
-        {
-            wifi = WIFI_CONNECTING;
-        }
-        else
-        {
-            wifi = WIFI_ERROR;
-        }
+        wifi = WIFI_CONNECTED;
+    }
+    else if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS)
+    {
+        wifi = WIFI_CONNECTING;
+    }
+    else if (st != WL_NO_SHIELD)
+    {
+        wifi = WIFI_ERROR;
     }
     sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
 
