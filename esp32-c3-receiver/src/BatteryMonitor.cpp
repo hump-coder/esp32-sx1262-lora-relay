@@ -35,7 +35,9 @@ BatteryMonitor::BatteryMonitor(uint8_t adcPin, float r1, float r2, float vRef, i
       _dailyMinSOC(100.0), _dailyMaxSOC(0.0), _dailySumSOC(0.0),
       _dailyCount(0),
       _debug(false), _lastDebugPrint(0), _lastRawAvg(0.0f),
-      _calibrationFactor(calibrationFactor) {
+      _calibrationFactor(calibrationFactor),
+      _filteredSOC(0.0f), _filteredSOCInitialized(false),
+      _alphaDown(0.02f), _alphaUp(0.1f) {
     _sampleBuffer = new float[_numSamples];
 }
 
@@ -162,6 +164,24 @@ void BatteryMonitor::update() {
     float pctLinear = getPercentage();
     float pctCurve = getPercentageCurve();
 
+    // Apply asymmetric smoothing to the percentage so that
+    // discharge is reported slowly while charging is reflected
+    // more quickly.  This helps avoid status churn caused by
+    // tiny voltage fluctuations while still reacting to real
+    // charging events (e.g. solar).
+    if (!_filteredSOCInitialized) {
+        _filteredSOC = pctCurve;
+        _filteredSOCInitialized = true;
+    } else {
+        if (pctCurve < _filteredSOC) {
+            // Discharging: use a small factor to decay slowly.
+            _filteredSOC += _alphaDown * (pctCurve - _filteredSOC);
+        } else {
+            // Charging: respond faster to increases.
+            _filteredSOC += _alphaUp * (pctCurve - _filteredSOC);
+        }
+    }
+
     unsigned long now = millis();
     if (_debug && now - _lastDebugPrint >= 1000) {
         Serial.printf("rawAvg: %.1f reading: %.2f V, voltage: %.2f V, %%: %.1f, scaled %%: %.1f\n",
@@ -199,6 +219,10 @@ float BatteryMonitor::getPercentageCurve() const {
         }
     }
     return 0.0;
+}
+
+float BatteryMonitor::getFilteredPercentage() const {
+    return _filteredSOC;
 }
 
 float BatteryMonitor::interpolateCurve(float voltage) const {

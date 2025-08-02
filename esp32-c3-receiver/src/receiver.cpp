@@ -463,7 +463,7 @@ int Receiver::getWifiState()
 
 void Receiver::updateStatusCache()
 {
-    lastBatteryPct = (int)battery.getPercentage();
+    lastBatteryPct = (int)battery.getFilteredPercentage();
     lastChargeState = battery.getChargeState();
     lastWifiState = getWifiState();
 }
@@ -495,7 +495,7 @@ void Receiver::loop()
 
     if (millis() - lastServiceUpdate > serviceUpdateFrequency)
     {
-        int b = (int)battery.getPercentage();
+        int b = (int)battery.getFilteredPercentage();
         ChargeState cs = battery.getChargeState();
         int wifi = getWifiState();
         // Only trigger an immediate status send if battery percent changed
