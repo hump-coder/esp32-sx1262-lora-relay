@@ -70,7 +70,7 @@ private:
 
     void publishControllerStatus();
     void publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery,
-                               bool low, bool full, int chargeState, int wifi);
+                               int chargeState, int wifi);
     void publishReceiverDailyStats(const struct DailyStats &stats);
 
     void setSendStatusFrequency(unsigned int freq);
