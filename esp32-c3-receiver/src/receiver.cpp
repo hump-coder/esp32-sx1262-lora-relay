@@ -600,6 +600,18 @@ void Receiver::connectWifi(const char *ssid, const char *pass)
     }
 }
 
+void Receiver::disableWifi()
+{
+    Serial.println("Disabling WiFi and OTA");
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_MODE_NULL);
+    if (otaEnabled)
+    {
+        ArduinoOTA.end();
+        otaEnabled = false;
+    }
+}
+
 void Receiver::processReceived(char *rxpacket)
 {
     char *strings[10];
@@ -640,9 +652,13 @@ void Receiver::processReceived(char *rxpacket)
             int power = atoi(strings[3]);
             setTxPower(power);
         } else if(strcasecmp(strings[2], "wifi") == 0) {
-            const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
-            const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
-            connectWifi(ssid, pass);
+            if (index >= 4 && strcasecmp(strings[3], "off") == 0) {
+                disableWifi();
+            } else {
+                const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
+                const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
+                connectWifi(ssid, pass);
+            }
         } else {
             bool newRelayState = false;
             if(strcasecmp(strings[2], "on") == 0 || strcasecmp(strings[2], "pulse") == 0) {

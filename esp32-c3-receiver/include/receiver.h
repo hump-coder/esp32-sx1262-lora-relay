@@ -55,6 +55,7 @@ class Receiver : public Device
     void send(char *packet, size_t len);
     void actuateRelay(bool state);
     void connectWifi(const char *ssid, const char *pass);
+    void disableWifi();
     bool otaEnabled = false;
 
 
