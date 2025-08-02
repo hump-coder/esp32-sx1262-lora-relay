@@ -152,13 +152,24 @@ void Controller::publishControllerStatus() {
     mqttClient.publish("pump_station/status/controller", payload, true);
 }
 
-void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery) {
-    char payload[128];
+void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery,
+                                       bool low, bool full, int chargeState) {
+    char payload[160];
+    const char *charge;
+    switch (chargeState) {
+        case 0: charge = "CHARGING"; break;
+        case 1: charge = "DISCHARGING"; break;
+        case 2: charge = "STABLE"; break;
+        default: charge = "UNKNOWN"; break;
+    }
     snprintf(payload, sizeof(payload),
-             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%d}",
+             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%d,\"low\":%s,\"full\":%s,\"charge\":\"%s\"}",
              power, rssi, snr,
              relay ? "ON" : "OFF",
-             pulse ? "pulse" : "normal", battery);
+             pulse ? "pulse" : "normal", battery,
+             low ? "true" : "false",
+             full ? "true" : "false",
+             charge);
     mqttClient.publish("pump_station/status/receiver", payload, true);
 }
 
@@ -685,14 +696,25 @@ void Controller::processReceived(char *rxpacket)
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'S')
         {
-            if(index >= 7) {
+            if(index >= 10) {
                 int power = atoi(strings[1]);
                 int rssi = atoi(strings[2]);
                 int snr = atoi(strings[3]);
                 bool state = atoi(strings[4]);
                 bool pulse = atoi(strings[5]);
                 int battery = atoi(strings[6]);
-                publishReceiverStatus(power, rssi, snr, state, pulse, battery);
+                bool low = atoi(strings[7]);
+                bool full = atoi(strings[8]);
+                int cstate = atoi(strings[9]);
+                publishReceiverStatus(power, rssi, snr, state, pulse, battery, low, full, cstate);
+            } else if(index >= 7) {
+                int power = atoi(strings[1]);
+                int rssi = atoi(strings[2]);
+                int snr = atoi(strings[3]);
+                bool state = atoi(strings[4]);
+                bool pulse = atoi(strings[5]);
+                int battery = atoi(strings[6]);
+                publishReceiverStatus(power, rssi, snr, state, pulse, battery, false, false, -1);
             }
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'D')

@@ -69,7 +69,8 @@ private:
     void pulseRelay(unsigned int onTime);
 
     void publishControllerStatus();
-    void publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery);
+    void publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery,
+                               bool low, bool full, int chargeState);
     void publishReceiverDailyStats(const struct DailyStats &stats);
 
     void setSendStatusFrequency(unsigned int freq);

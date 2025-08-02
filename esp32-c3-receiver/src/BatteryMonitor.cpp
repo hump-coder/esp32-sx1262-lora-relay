@@ -82,6 +82,31 @@ void BatteryMonitor::setCalibrationFactor(float factor) {
     _calibrationFactor = factor;
 }
 
+void BatteryMonitor::setLowThreshold(float voltage) {
+    _lowThreshold = voltage;
+}
+
+void BatteryMonitor::setHighThreshold(float voltage) {
+    _highThreshold = voltage;
+}
+
+bool BatteryMonitor::isLow() const {
+    return getVoltage() <= _lowThreshold;
+}
+
+bool BatteryMonitor::isFull() const {
+    return getVoltage() >= _highThreshold;
+}
+
+void BatteryMonitor::setVoltageRange(float vEmpty, float vFull) {
+    _vEmpty = vEmpty;
+    _vFull = vFull;
+}
+
+ChargeState BatteryMonitor::getChargeState() const {
+    return _chargeState;
+}
+
 void BatteryMonitor::update() {
     float reading = takeSingleReading();
     _sampleBuffer[_sampleIndex] = reading;

@@ -43,7 +43,9 @@ It exposes a `switch` entity for basic on/off control and `number` entities name
 `Pump Pulse`, `Controller Tx Power` and `Receiver Tx Power`.
 It also publishes `sensor` entities `Controller Status` and `Receiver Status`
 which report the JSON data sent to `pump_station/status/controller` and
-`pump_station/status/receiver`.
+`pump_station/status/receiver`. The receiver status now also includes
+`low` and `full` battery flags along with a `charge` state of
+`CHARGING`, `DISCHARGING` or `STABLE`.
 The controller enforces a minimum transmit power defined by `MIN_TX_OUTPUT_POWER`.
 
 On boot the controller sends a `STATUS` request to the receiver. The receiver
