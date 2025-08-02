@@ -58,4 +58,11 @@
 // Digital pin indicating charge status (HIGH when charging)
 #define CHARGE_STATUS_PIN 34
 
+enum WifiStatus {
+    WIFI_DISABLED,
+    WIFI_CONNECTED,
+    WIFI_CONNECTING,
+    WIFI_ERROR
+};
+
 #endif

@@ -153,8 +153,8 @@ void Controller::publishControllerStatus() {
 }
 
 void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery,
-                                       bool low, bool full, int chargeState) {
-    char payload[160];
+                                       bool low, bool full, int chargeState, int wifi) {
+    char payload[200];
     const char *charge;
     switch (chargeState) {
         case 0: charge = "CHARGING"; break;
@@ -162,14 +162,22 @@ void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay,
         case 2: charge = "STABLE"; break;
         default: charge = "UNKNOWN"; break;
     }
+    const char *wifiState;
+    switch (wifi) {
+        case WIFI_DISABLED: wifiState = "DISABLED"; break;
+        case WIFI_CONNECTED: wifiState = "CONNECTED"; break;
+        case WIFI_CONNECTING: wifiState = "CONNECTING"; break;
+        case WIFI_ERROR: wifiState = "ERROR"; break;
+        default: wifiState = "UNKNOWN"; break;
+    }
     snprintf(payload, sizeof(payload),
-             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%d,\"low\":%s,\"full\":%s,\"charge\":\"%s\"}",
+             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%d,\"low\":%s,\"full\":%s,\"charge\":\"%s\",\"wifi\":\"%s\"}",
              power, rssi, snr,
              relay ? "ON" : "OFF",
              pulse ? "pulse" : "normal", battery,
              low ? "true" : "false",
              full ? "true" : "false",
-             charge);
+             charge, wifiState);
     mqttClient.publish("pump_station/status/receiver", payload, true);
 }
 
@@ -716,7 +724,7 @@ void Controller::processReceived(char *rxpacket)
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'S')
         {
-            if(index >= 10) {
+            if(index >= 11) {
                 int power = atoi(strings[1]);
                 int rssi = atoi(strings[2]);
                 int snr = atoi(strings[3]);
@@ -726,7 +734,17 @@ void Controller::processReceived(char *rxpacket)
                 bool low = atoi(strings[7]);
                 bool full = atoi(strings[8]);
                 int cstate = atoi(strings[9]);
-                publishReceiverStatus(power, rssi, snr, state, pulse, battery, low, full, cstate);
+                int wifi = atoi(strings[10]);
+                publishReceiverStatus(power, rssi, snr, state, pulse, battery, low, full, cstate, wifi);
+            } else if(index >= 8) {
+                int power = atoi(strings[1]);
+                int rssi = atoi(strings[2]);
+                int snr = atoi(strings[3]);
+                bool state = atoi(strings[4]);
+                bool pulse = atoi(strings[5]);
+                int battery = atoi(strings[6]);
+                int wifi = atoi(strings[7]);
+                publishReceiverStatus(power, rssi, snr, state, pulse, battery, false, false, -1, wifi);
             } else if(index >= 7) {
                 int power = atoi(strings[1]);
                 int rssi = atoi(strings[2]);
@@ -734,7 +752,7 @@ void Controller::processReceived(char *rxpacket)
                 bool state = atoi(strings[4]);
                 bool pulse = atoi(strings[5]);
                 int battery = atoi(strings[6]);
-                publishReceiverStatus(power, rssi, snr, state, pulse, battery, false, false, -1);
+                publishReceiverStatus(power, rssi, snr, state, pulse, battery, false, false, -1, WIFI_DISABLED);
             }
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'D')
