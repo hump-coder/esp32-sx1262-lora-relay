@@ -428,8 +428,6 @@ void Receiver::sendHello()
 void Receiver::sendStatus()
 {
     int b = (int) battery.getPercentage();
-    int low = battery.isLow() ? 1 : 0;
-    int full = battery.isFull() ? 1 : 0;
     int state = static_cast<int>(battery.getChargeState());
     int wifi = WIFI_DISABLED;
     if (WiFi.getMode() != WIFI_MODE_NULL)
@@ -448,7 +446,7 @@ void Receiver::sendStatus()
             wifi = WIFI_ERROR;
         }
     }
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, low, full, state, wifi);
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
 
     pendingDailyStats = true;
     send(txpacket, strlen(txpacket));
