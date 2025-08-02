@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "battery.h"
 #include "controller.h"
+#include <ctype.h>
 
 // #include <Wire.h>
 // #include <Adafruit_GFX.h>
@@ -18,6 +19,40 @@
 
 Controller *controllerInstance;
 extern Battery battery;
+
+struct DailyStats {
+    float minV = 0;
+    float maxV = 0;
+    float avgV = 0;
+    float minSOC = 0;
+    float maxSOC = 0;
+    float avgSOC = 0;
+};
+
+static bool parseDailyStats(const char *str, DailyStats &stats) {
+    const char *p = str;
+    while (*p) {
+        char label = *p++;
+        char buf[16];
+        int i = 0;
+        while (*p && (isdigit(*p) || *p == '.' || *p == '-')) {
+            if (i < (int)sizeof(buf) - 1) buf[i++] = *p;
+            p++;
+        }
+        buf[i] = '\0';
+        float val = atof(buf);
+        switch (label) {
+            case 'm': stats.minV = val; break;
+            case 'M': stats.maxV = val; break;
+            case 'A': stats.avgV = val; break;
+            case 's': stats.minSOC = val; break;
+            case 'S': stats.maxSOC = val; break;
+            case 'a': stats.avgSOC = val; break;
+            default: break;
+        }
+    }
+    return true;
+}
 
 void COnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr)
 {
@@ -127,6 +162,14 @@ void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay,
     mqttClient.publish("pump_station/status/receiver", payload, true);
 }
 
+void Controller::publishReceiverDailyStats(const DailyStats &stats) {
+    char payload[128];
+    snprintf(payload, sizeof(payload),
+             "{\"minV\":%.2f,\"maxV\":%.2f,\"avgV\":%.2f,\"minSOC\":%.1f,\"maxSOC\":%.1f,\"avgSOC\":%.1f}",
+             stats.minV, stats.maxV, stats.avgV, stats.minSOC, stats.maxSOC, stats.avgSOC);
+    mqttClient.publish("pump_station/status/receiver/battery_daily", payload, true);
+}
+
 void controllerMqttCallback(char *topic, byte *payload, unsigned int length)
 {
   controllerInstance->mqttCallback(topic, payload, length);
@@ -226,6 +269,10 @@ void Controller::sendDiscovery() {
     const char *rxStatusTopic = "homeassistant/sensor/pump_station_rx_status/config";
     const char *rxStatusPayload = "{\"name\":\"Receiver Status\",\"state_topic\":\"pump_station/status/receiver\",\"value_template\":\"{{ value_json.state }}\",\"json_attributes_topic\":\"pump_station/status/receiver\",\"unique_id\":\"pump_station_rx_status\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"Heltec WiFi LoRa 32 V3\",\"manufacturer\":\"Heltec\"}}";
     mqttClient.publish(rxStatusTopic, rxStatusPayload, true);
+
+    const char *rxBattDailyTopic = "homeassistant/sensor/pump_station_rx_batt_daily/config";
+    const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_rx_batt_daily\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"Heltec WiFi LoRa 32 V3\",\"manufacturer\":\"Heltec\"}}";
+    mqttClient.publish(rxBattDailyTopic, rxBattDailyPayload, true);
 }
 
 
@@ -646,6 +693,14 @@ void Controller::processReceived(char *rxpacket)
                 bool pulse = atoi(strings[5]);
                 int battery = atoi(strings[6]);
                 publishReceiverStatus(power, rssi, snr, state, pulse, battery);
+            }
+        }
+        else if(strlen(strings[0]) == 1 && strings[0][0] == 'D')
+        {
+            if(index >= 2) {
+                DailyStats stats;
+                parseDailyStats(strings[1], stats);
+                publishReceiverDailyStats(stats);
             }
         }
     }

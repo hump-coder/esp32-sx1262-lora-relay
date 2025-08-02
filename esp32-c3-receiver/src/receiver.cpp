@@ -119,6 +119,7 @@ Receiver::Receiver()
     ackStateId = 0;
     ackConfirmed = true;
     lastStatusSend = 0;
+    pendingDailyStats = false;
 }
 void Receiver::updateDisplay()
 {
@@ -421,10 +422,11 @@ void Receiver::sendHello()
 }
 
 void Receiver::sendStatus()
-{    
+{
     int b = (int) battery.getPercentage();
     sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b);
-    
+
+    pendingDailyStats = true;
     send(txpacket, strlen(txpacket));
     Serial.printf("Sent status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
 
@@ -434,6 +436,14 @@ void Receiver::sendStatus()
     // transmissionState = radio.startTransmit((uint8_t *)txpacket, strlen(txpacket));
 
     // Serial.println("status sent.");
+}
+
+void Receiver::sendDailyStats()
+{
+    String stats = battery.getDailyStatsCompact();
+    snprintf(txpacket, sizeof(txpacket), "D:%s", stats.c_str());
+    send(txpacket, strlen(txpacket));
+    Serial.printf("Sent daily stats \"%s\", length %d\r\n", txpacket, strlen(txpacket));
 }
 
 unsigned long lastScreenUpdate = 0;
@@ -625,7 +635,12 @@ void Receiver::OnTxDone(void)
 {
     // radio.sleep();
     Serial.println("TX done......");
-    setIdle();
+    if (pendingDailyStats) {
+        pendingDailyStats = false;
+        sendDailyStats();
+    } else {
+        setIdle();
+    }
 }
 
 void Receiver::OnTxTimeout()

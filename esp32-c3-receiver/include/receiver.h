@@ -23,6 +23,7 @@ class Receiver : public Device
     unsigned int getSendStatusFrequency() const { return statusSendFreqSec; }
 
     void sendStatus();
+    void sendDailyStats();
 
     private:
     void sendHello();
@@ -46,6 +47,7 @@ class Receiver : public Device
     int txPower = TX_OUTPUT_POWER;
     unsigned int statusSendFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
     unsigned long lastStatusSend = 0;
+    bool pendingDailyStats = false;
     bool mIsTransmitting = false;
     void sendAck(char *rxpacket);
     void setRelayState(bool newRelayState);
