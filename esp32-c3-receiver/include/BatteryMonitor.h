@@ -86,6 +86,11 @@ private:
     float _vFull;
 
     mutable ChargeState _chargeState;
+    ChargeState _pendingState;
+    int _stateStreak;
+    float _emaShort;
+    float _emaLong;
+    bool _emaInitialized;
 
     bool _ucVoltage;
     bool _ucLinearPct;

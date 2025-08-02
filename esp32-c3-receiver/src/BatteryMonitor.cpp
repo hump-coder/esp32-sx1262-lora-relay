@@ -28,7 +28,8 @@ BatteryMonitor::BatteryMonitor(uint8_t adcPin, float r1, float r2, float vRef, i
       _sampleIndex(0), _bufferFilled(false),
       _lowThreshold(3.2), _highThreshold(4.1),
       _vEmpty(3.0), _vFull(4.2),
-      _chargeState(STABLE),
+      _chargeState(STABLE), _pendingState(STABLE), _stateStreak(0),
+      _emaShort(0.0f), _emaLong(0.0f), _emaInitialized(false),
       _ucVoltage(true), _ucLinearPct(true), _ucCurvePct(true), _ucState(true),
       _dailyMinV(99.0), _dailyMaxV(0.0), _dailySumV(0.0),
       _dailyMinSOC(100.0), _dailyMaxSOC(0.0), _dailySumSOC(0.0),
@@ -72,6 +73,10 @@ void BatteryMonitor::begin() {
         _sampleBuffer[i] = takeSingleReading();
     }
     _bufferFilled = true;
+    float initial = getMovingAverage();
+    _emaShort = initial;
+    _emaLong = initial;
+    _emaInitialized = true;
 }
 
 void BatteryMonitor::enableDebug(bool enable) {
@@ -113,22 +118,42 @@ void BatteryMonitor::update() {
     _sampleIndex = (_sampleIndex + 1) % _numSamples;
     if (_sampleIndex == 0) _bufferFilled = true;
 
-    int lookback = _numSamples / 4;
-    if (lookback < 2) lookback = 2;
-
-    int oldIndex = (_sampleIndex - lookback + _numSamples) % _numSamples;
-    float recentVoltage = _sampleBuffer[_sampleIndex == 0 ? _numSamples - 1 : _sampleIndex - 1];
-    float olderVoltage = _sampleBuffer[oldIndex];
-
-    float delta = recentVoltage - olderVoltage;
-    const float hysteresis = 0.005;
-
-    if (delta > hysteresis) {
-        _chargeState = CHARGING;
-    } else if (delta < -hysteresis) {
-        _chargeState = DISCHARGING;
+    if (!_emaInitialized) {
+        _emaShort = reading;
+        _emaLong = reading;
+        _emaInitialized = true;
     } else {
-        _chargeState = STABLE;
+        const float alphaShort = 0.2f;
+        const float alphaLong = 0.05f;
+        _emaShort = alphaShort * reading + (1.0f - alphaShort) * _emaShort;
+        _emaLong = alphaLong * reading + (1.0f - alphaLong) * _emaLong;
+    }
+
+    float delta = _emaShort - _emaLong;
+    const float hysteresis = 0.01f;
+
+    ChargeState candidate;
+    if (delta > hysteresis) {
+        candidate = CHARGING;
+    } else if (delta < -hysteresis) {
+        candidate = DISCHARGING;
+    } else {
+        candidate = STABLE;
+    }
+
+    if (candidate == _chargeState) {
+        _stateStreak = 0;
+        _pendingState = candidate;
+    } else {
+        if (candidate == _pendingState) {
+            if (++_stateStreak >= 3) {
+                _chargeState = candidate;
+                _stateStreak = 0;
+            }
+        } else {
+            _pendingState = candidate;
+            _stateStreak = 1;
+        }
     }
 
     updateDailyStats();
