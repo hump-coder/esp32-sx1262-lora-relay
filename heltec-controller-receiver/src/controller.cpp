@@ -160,7 +160,6 @@ void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay,
     switch (chargeState) {
         case 0: charge = "CHARGING"; break;
         case 1: charge = "DISCHARGING"; break;
-        case 2: charge = "STABLE"; break;
         default: charge = "UNKNOWN"; break;
     }
     const char *wifiState;

@@ -47,7 +47,7 @@ It exposes a `switch` entity for basic on/off control and `number` entities name
 It also publishes `sensor` entities `Controller Status` and `Receiver Status`
 which report the JSON data sent to `pump_station/status/controller` and
 `pump_station/status/receiver`. The receiver status now includes a battery
-percentage and a `charge` state of `CHARGING`, `DISCHARGING` or `STABLE`.
+percentage and a `charge` state of `CHARGING` or `DISCHARGING`.
 The controller enforces a minimum transmit power defined by `MIN_TX_OUTPUT_POWER`.
 
 On boot the controller sends a `STATUS` request to the receiver. The receiver

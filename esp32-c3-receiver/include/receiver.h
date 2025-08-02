@@ -53,7 +53,7 @@ class Receiver : public Device
     bool pendingDailyStats = false;
     bool mIsTransmitting = false;
     int lastBatteryPct = -1;
-    ChargeState lastChargeState = STABLE;
+    ChargeState lastChargeState = DISCHARGING;
     int lastWifiState = WIFI_DISABLED;
     void sendAck(char *rxpacket);
     void setRelayState(bool newRelayState);
