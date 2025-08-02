@@ -30,6 +30,8 @@ class Receiver : public Device
     void updateDisplay();
     void setIdle();
     bool mWifiEnabled=false;
+    void connectWifi(const char *ssid, const char *pass);
+    void disableWifi();
     private:
     Display &mDisplay;
     Battery &mBattery;
@@ -49,6 +51,7 @@ class Receiver : public Device
     int txPower = TX_OUTPUT_POWER;
     unsigned int statusSendFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
     unsigned long lastStatusSend = 0;
+    bool otaEnabled = false;
     void sendAck(char *rxpacket);
     void setRelayState(bool newRelayState);
     void processReceived(char *rxpacket);
