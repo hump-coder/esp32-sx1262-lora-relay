@@ -549,6 +549,12 @@ void Controller::setRelayState(bool pumpOn, unsigned int onTime, bool pulse)
   pulseMode = pumpOn && pulse;
   relayState = RelayState::UNKNOWN;
 
+  if(pumpOn && !pulseMode && onTimeSec > 0) {
+      nextRelayRefresh = millis() + ((unsigned long)onTimeSec * 1000UL / 2);
+  } else {
+      nextRelayRefresh = 0;
+  }
+
   char msg[32];
   if(pumpOn) {
       if(pulse) {
@@ -582,6 +588,14 @@ void Controller::loop() {
        lastContactTime && millis() - lastContactTime > COMMUNICATION_TIMEOUT_MS) {
         relayState = RelayState::UNKNOWN;
         publishState();
+    }
+
+    if(requestedRelayState == RelayState::ON && !pulseMode && !awaitingAck &&
+       nextRelayRefresh && millis() > nextRelayRefresh) {
+        char msg[32];
+        sprintf(msg, "ON:%u", onTimeSec);
+        enqueueMessage(msg);
+        nextRelayRefresh = millis() + ((unsigned long)onTimeSec * 1000UL / 2);
     }
 
     processQueue();
