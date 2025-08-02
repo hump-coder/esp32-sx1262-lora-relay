@@ -59,7 +59,6 @@ Receiver *instance;
 
 char txpacket[BUFFER_SIZE];
 char rxpacket[BUFFER_SIZE];
-char ackpacket[BUFFER_SIZE];
 
 double txNumber;
 
@@ -118,9 +117,6 @@ Receiver::Receiver()
     mLastSnr = 0;
     mRelayState = false;
     mPulseMode = false;
-    acksRemaining = 0;
-    ackStateId = 0;
-    ackConfirmed = true;
     lastStatusSend = 0;
     pendingDailyStats = false;
     otaEnabled = false;
@@ -145,7 +141,6 @@ void Receiver::updateDisplay()
 
 //     y+=step;
 //     mDisplay.display.setCursor(x, y);
-//     mDisplay.display.printf("Ack: %s", ackConfirmed ? "OK" : "WAIT");
     
 //     y+=step;
 //     mDisplay.display.setCursor(x, y);
@@ -156,7 +151,6 @@ void Receiver::updateDisplay()
 //         }
 //         mDisplay.display.printf("Time: %lus", remaining);
 //     } else {
-//         mDisplay.display.printf("Pend Acks: %d", acksRemaining);
 //     }
 
 //     y+=step;
@@ -480,8 +474,6 @@ void Receiver::sendDailyStats()
 unsigned long lastServiceUpdate = 0;
 unsigned long serviceUpdateFrequency = 1000;
 
-unsigned long lastAckUpdate = 0;
-unsigned long ackUpdateFrequency = 3000;
 
 
 void Receiver::loop()
@@ -514,19 +506,6 @@ void Receiver::loop()
         lastServiceUpdate = millis();
     }
     
-    if (lora_idle && millis() - lastAckUpdate > ackUpdateFrequency)
-    {
-      if (!ackConfirmed && acksRemaining)
-      {
-          --acksRemaining;
-          delay(100);
-          sendAck(ackpacket);
-      }
-
-      //lastAckUpdate = millis();
-    }
-
-
     if(lora_idle && millis() - lastStatusSend > statusSendFreqSec * 1000UL)
     {
         sendStatus();
@@ -543,25 +522,10 @@ void Receiver::loop()
     }
 }
 
-void Receiver::sendAck(char *packet)
+void Receiver::sendAck(uint16_t id, const char *status)
 {
-    //
-    // Mark the packet as from the receiver.
-    //
-    packet[0] = 'R';
-
-    // Serial.printf("Sending ack \"%s\", length %d\r\n", packet, strlen(packet));
-
-
-    send(packet, strlen(packet));
-
-    lastAckUpdate = millis();
-
-//     lora_idle = false;
-//    // Radio.Send((uint8_t *)packet, strlen(packet)); // send the package out
-//     transmissionState = radio.startTransmit((uint8_t *)txpacket, strlen(txpacket));
-
-    // Serial.println("ack packet sent.");
+    snprintf(txpacket, sizeof(txpacket), "A:%u:%s", id, status);
+    send(txpacket, strlen(txpacket));
 }
 
 void Receiver::actuateRelay(bool state)
@@ -638,9 +602,6 @@ void Receiver::processReceived(char *rxpacket)
     char *ptr = NULL;
     int index = 0;
 
-    ackpacket[0] = 0; 
-    strcpy(ackpacket, rxpacket);
-
     ptr = strtok(rxpacket, ":;"); // takes a list of delimiters
     while (ptr != NULL)
     {
@@ -649,36 +610,34 @@ void Receiver::processReceived(char *rxpacket)
         ptr = strtok(NULL, ":;"); // takes a list of delimiters
     }
 
-    if (index >= 2 && strlen(strings[0]) == 1 && strings[0][0] == 'A')
+    if (index >= 3 && strlen(strings[0]) == 1 && strings[0][0] == 'C')
     {
         uint16_t stateId = atoi(strings[1]);
-        if(stateId == ackStateId)
-        {
-            ackConfirmed = true;
-            acksRemaining = 0;
-        }
-    }
-    else if (index >= 3 && strlen(strings[0]) == 1 && strings[0][0] == 'C')
-    {
-        uint16_t stateId = atoi(strings[1]);
+        const char *resp = NULL;
+        bool duplicate = stateId <= lastCommandId;
+
         if(strcasecmp(strings[2], "status") == 0) {
             sendStatus();
-            return;
+            resp = "status";
         } else if(strcasecmp(strings[2], "freq") == 0 && index >= 4) {
             int freq = atoi(strings[3]);
-            setSendStatusFrequency(freq);
-            return;
+            if(!duplicate) setSendStatusFrequency(freq);
+            resp = "freq";
         } else if(strcasecmp(strings[2], "pwr") == 0 && index >= 4) {
             int power = atoi(strings[3]);
-            setTxPower(power);
+            if(!duplicate) setTxPower(power);
+            resp = "pwr";
         } else if(strcasecmp(strings[2], "wifi") == 0) {
-            if (index >= 4 && strcasecmp(strings[3], "off") == 0) {
-                disableWifi();
-            } else {
-                const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
-                const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
-                connectWifi(ssid, pass);
+            if(!duplicate) {
+                if (index >= 4 && strcasecmp(strings[3], "off") == 0) {
+                    disableWifi();
+                } else {
+                    const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
+                    const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
+                    connectWifi(ssid, pass);
+                }
             }
+            resp = "wifi";
         } else {
             bool newRelayState = false;
             if(strcasecmp(strings[2], "on") == 0 || strcasecmp(strings[2], "pulse") == 0) {
@@ -690,12 +649,12 @@ void Receiver::processReceived(char *rxpacket)
                 onTimeSec = 0;
             }
             mPulseMode = strcasecmp(strings[2], "pulse") == 0;
-            setRelayState(newRelayState);
+            if(!duplicate) setRelayState(newRelayState);
+            resp = newRelayState ? (mPulseMode ? "pulse" : "on") : "off";
         }
+        if(!duplicate) lastCommandId = stateId;
         delay(200);
-        ackStateId = stateId;
-        ackConfirmed = false;
-        acksRemaining = 4;
+        sendAck(stateId, resp ? resp : "ok");
     }
 }
 

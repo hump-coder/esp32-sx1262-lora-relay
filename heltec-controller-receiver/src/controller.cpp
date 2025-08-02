@@ -13,6 +13,7 @@
 #include "battery.h"
 #include "controller.h"
 #include <ctype.h>
+#include <deque>
 
 // #include <Wire.h>
 // #include <Adafruit_GFX.h>
@@ -208,10 +209,8 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
                 t = cmd.substring(idx+1).toInt();
                 if(t == 0) t = DEFAULT_ON_TIME_SEC;
             }
-            heartbeatEnabled = true;
             setRelayState(true, t);
         } else if (cmd.startsWith("OFF")) {
-            heartbeatEnabled = false;
             setRelayState(false);
         }
         publishState();
@@ -372,7 +371,6 @@ void Controller::ensureMqtt() {
 
     if(!initialSetReceived && initialStateReceived && retainedStateOn) {
         // No retained command but last known state was ON
-        heartbeatEnabled = true;
         setRelayState(true);
     }
 }
@@ -445,29 +443,76 @@ void Controller::setup() {
     Serial.println("Init MQTT - complete");
 }
 
-void Controller::sendMessage(const char *msg)
+void Controller::enqueueMessage(const char *msg)
 {
-        //snprintf(txpacket, sizeof(txpacket), msg.c_str());
- 		sprintf(txpacket,"C:%ld:%s",mStateId, msg);  //start a package
-   
-		Serial.printf("Sending packet \"%s\", length %d\r\n",txpacket, strlen(txpacket));
-
-        lora_idle = false;
-		Radio.Send( (uint8_t *)txpacket, strlen(txpacket) ); //send the package out	
-       
-        Serial.println("packet sent.");   
+    String payload(msg);
+    int idx = payload.indexOf(':');
+    String type = idx >= 0 ? payload.substring(0, idx) : payload;
+    for (auto it = outbox.begin(); it != outbox.end(); ++it)
+    {
+        if (it->type == type)
+        {
+            it->payload = payload;
+            return;
+        }
+    }
+    OutgoingMessage m;
+    m.type = type;
+    m.payload = payload;
+    m.id = mStateId++;
+    m.attempts = 0;
+    outbox.push_back(m);
 }
 
-void Controller::sendAckReceived(uint16_t stateId)
+void Controller::sendCurrentMessage()
 {
-        sprintf(txpacket, "A:%u", stateId);
+    if (outbox.empty())
+        return;
+    auto &msg = outbox.front();
+    sprintf(txpacket, "C:%u:%s", msg.id, msg.payload.c_str());
+    Serial.printf("Sending packet \"%s\", length %d\r\n", txpacket, strlen(txpacket));
+    lora_idle = false;
+    Radio.Send((uint8_t *)txpacket, strlen(txpacket));
+    Serial.println("packet sent.");
+    msg.attempts++;
+    awaitingAck = true;
+    lastSendAttempt = millis();
+}
 
-        Serial.printf("Sending ack receipt \"%s\", length %d\r\n", txpacket, strlen(txpacket));
+void Controller::processQueue()
+{
+    if (awaitingAck)
+    {
+        if (outbox.empty())
+        {
+            awaitingAck = false;
+            return;
+        }
+        auto &msg = outbox.front();
+        if (millis() - lastSendAttempt > RETRY_INTERVAL_MS)
+        {
+            if (msg.attempts < MAX_RETRIES)
+            {
+                sendCurrentMessage();
+            }
+            else
+            {
+                Serial.printf("Dropping message %s after %d attempts\n", msg.payload.c_str(), msg.attempts);
+                outbox.pop_front();
+                awaitingAck = false;
+            }
+        }
+    }
+    else if (!outbox.empty() && lora_idle)
+    {
+        sendCurrentMessage();
+    }
+}
 
-        lora_idle = false;
-        Radio.Send((uint8_t *)txpacket, strlen(txpacket));
-
-        Serial.println("ack receipt sent.");
+void Controller::sendMessage(const char *msg)
+{
+    enqueueMessage(msg);
+    processQueue();
 }
 
 void Controller::setTxPower(int power)
@@ -497,19 +542,12 @@ void Controller::setSendStatusFrequency(unsigned int freq)
 
 void Controller::setRelayState(bool pumpOn, unsigned int onTime, bool pulse)
 {
-  ++mStateId;
   requestedRelayState = pumpOn ? RelayState::ON : RelayState::OFF;
   if(pumpOn) {
       onTimeSec = onTime;
   }
   pulseMode = pumpOn && pulse;
   relayState = RelayState::UNKNOWN;
-  lastCommandTime = millis();
-  if(pumpOn) {
-      offRetriesRemaining = 0;
-  } else {
-      offRetriesRemaining = OFF_RETRY_COUNT;
-  }
 
   char msg[32];
   if(pumpOn) {
@@ -517,7 +555,6 @@ void Controller::setRelayState(bool pumpOn, unsigned int onTime, bool pulse)
           sprintf(msg, "PULSE:%u", onTimeSec);
       } else {
           sprintf(msg, "ON:%u", onTimeSec);
-          nextOnSend = millis();
       }
   } else {
       sprintf(msg, "OFF");
@@ -528,7 +565,6 @@ void Controller::setRelayState(bool pumpOn, unsigned int onTime, bool pulse)
 
 void Controller::pulseRelay(unsigned int onTime)
 {
-    heartbeatEnabled = false;
     autoOffTime = millis() + (unsigned long)onTime * 1000UL;
     setRelayState(true, onTime, true);
 }
@@ -538,28 +574,7 @@ void Controller::loop() {
     ArduinoOTA.handle();
     if(autoOffTime && millis() > autoOffTime) {
         autoOffTime = 0;
-        heartbeatEnabled = false;
         setRelayState(false);
-    }
-
-    // When ON is requested continue to periodically resend the ON command even
-    // if the receiver is not acknowledging.
-    if(heartbeatEnabled && lora_idle && requestedRelayState == RelayState::ON) {
-        unsigned long interval = (onTimeSec * 1000UL) / 20;
-        unsigned long minimumInterval = 5000;
-        unsigned long maximumInterval = 30000;
-        
-        if(interval < minimumInterval)
-        {
-            interval = minimumInterval;
-        }
-        
-        if(millis() - nextOnSend >= interval) {
-            char msg[32];
-            sprintf(msg, "ON:%u", onTimeSec);
-            sendMessage(msg);
-            nextOnSend = millis();
-        }
     }
 
     // Detect loss of communication while the relay should be ON
@@ -569,19 +584,7 @@ void Controller::loop() {
         publishState();
     }
 
-    // Retry OFF commands a few times before giving up
-    if(requestedRelayState == RelayState::OFF && relayState != RelayState::OFF) {
-        if(offRetriesRemaining > 0 && millis() - lastCommandTime >= OFF_RETRY_INTERVAL_MS && lora_idle) {
-            sendMessage("OFF");
-            lastCommandTime = millis();
-            offRetriesRemaining--;
-        } else if(offRetriesRemaining == 0 && millis() - lastCommandTime >= OFF_RETRY_INTERVAL_MS) {
-            if(relayState != RelayState::UNKNOWN) {
-                relayState = RelayState::UNKNOWN;
-                publishState();
-            }
-        }
-    }
+    processQueue();
     
 
 
@@ -642,14 +645,13 @@ void Controller::processReceived(char *rxpacket)
     
     if (index >= 3)
     {
-        if (strlen(strings[0]) == 1 && strings[0][0] == 'R')
+        if (strlen(strings[0]) == 1 && strings[0][0] == 'A')
         {
             uint16_t stateId = atoi(strings[1]);
-
-            if (stateId != mStateId)
+            if (!outbox.empty() && outbox.front().id == stateId)
             {
-                Serial.printf("Skipping - likely an old ack expected stateid: %d, got %d.\n", mStateId, stateId);
-                return;
+                awaitingAck = false;
+                outbox.pop_front();
             }
 
             if(strcasecmp(strings[2], "on") == 0 || strcasecmp(strings[2], "off") == 0 || strcasecmp(strings[2], "pulse") == 0)
@@ -662,13 +664,7 @@ void Controller::processReceived(char *rxpacket)
                     {
                         Serial.printf("Relay state confirmed - publishing new state: %s\n", confirmedRelayState == RelayState::ON ? "ON" : "OFF");
                         relayState = confirmedRelayState;
-                        ++mStateId; // do not increment for heartbeat
-                        offRetriesRemaining = 0;
                         publishState();
-                    }
-                    else
-                    {
-                        Serial.println("Heartbeat ack received.");
                     }
                 }
                 else
@@ -681,32 +677,25 @@ void Controller::processReceived(char *rxpacket)
                 int power = atoi(strings[3]);
                 Serial.printf("Receiver power acknowledged: %d dBm\n", power);
                 receiverTxPower = power;
-                ++mStateId;
             }
             else if(strcasecmp(strings[2], "freq") == 0 && index >= 4)
             {
                 unsigned int freq = atoi(strings[3]);
                 Serial.printf("Receiver status frequency acknowledged: %u sec\n", freq);
                 receiverStatusFreqSec = freq;
-                ++mStateId;
             }
             else if(strcasecmp(strings[2], "status") == 0)
             {
                 Serial.println("Status command acknowledged");
-                ++mStateId;
             }
             else if(strcasecmp(strings[2], "wifi") == 0)
             {
                 Serial.println("Receiver WiFi command acknowledged");
-                ++mStateId;
             }
             else
             {
-                Serial.printf("Unknown R ack for command: %s\n", strings[2]);
-                ++mStateId;
+                Serial.printf("Unknown ack for command: %s\n", strings[2]);
             }
-
-            sendAckReceived(stateId);
         }
         else if(strlen(strings[0]) == 1 && strings[0][0] == 'H')
         {

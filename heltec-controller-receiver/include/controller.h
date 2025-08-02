@@ -9,6 +9,7 @@
 #include "display.h"
 #include "device-config.h"
 #include "settings.h"
+#include <deque>
 
 struct DailyStats;
 
@@ -64,7 +65,9 @@ private:
     void ensureMqtt();
     void updateDisplay();
     void sendMessage(const char *msg);
-    void sendAckReceived(uint16_t stateId);
+    void enqueueMessage(const char *msg);
+    void processQueue();
+    void sendCurrentMessage();
     void setRelayState(bool pumpOn, unsigned int onTime = DEFAULT_ON_TIME_SEC, bool pulse = false);
     void pulseRelay(unsigned int onTime);
 
@@ -76,11 +79,9 @@ private:
     void setSendStatusFrequency(unsigned int freq);
     unsigned int getSendStatusFrequency() const { return statusSendFreqSec; }
 
-    unsigned long nextOnSend = 0;
     unsigned int onTimeSec = DEFAULT_ON_TIME_SEC;
     unsigned int statusSendFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
     unsigned int receiverStatusFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
-    bool heartbeatEnabled = true;
     unsigned long autoOffTime = 0;
     unsigned long lastStatusPublish = 0;
     bool pulseMode = false;
@@ -88,11 +89,18 @@ private:
     // Timestamp of the last packet received from the receiver
     unsigned long lastContactTime = 0;
 
-    // Timestamp of the last command sent that expects an acknowledgement
-    unsigned long lastCommandTime = 0;
-
-    // Remaining retries when sending an OFF command
-    int offRetriesRemaining = 0;
+    // Outgoing message queue
+    struct OutgoingMessage {
+        String type;
+        String payload;
+        uint16_t id;
+        uint8_t attempts;
+    };
+    std::deque<OutgoingMessage> outbox;
+    bool awaitingAck = false;
+    unsigned long lastSendAttempt = 0;
+    static const unsigned long RETRY_INTERVAL_MS = 3000;
+    static const uint8_t MAX_RETRIES = 4;
 
     // Flag set when a command is received on
     // pump_station/switch/set immediately after connecting
