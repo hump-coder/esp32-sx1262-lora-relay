@@ -446,28 +446,38 @@ void Receiver::sendDailyStats()
     Serial.printf("Sent daily stats \"%s\", length %d\r\n", txpacket, strlen(txpacket));
 }
 
-unsigned long lastScreenUpdate = 0;
+unsigned long lastServiceUpdate = 0;
+unsigned long serviceUpdateFrequency = 1000;
+
+unsigned long lastAckUpdate = 0;
+unsigned long ackUpdateFrequency = 3000;
+
 
 void Receiver::loop()
 {
     if(mRelayState && offTime && millis() > offTime) {
         setRelayState(false);
     }
-    if (millis() - lastScreenUpdate > 1000)
+
+    if (millis() - lastServiceUpdate > serviceUpdateFrequency)
     {
         battery.getPercentage();
-
         updateDisplay();
-
-        if (!ackConfirmed && acksRemaining)
-        {
-            --acksRemaining;
-            delay(100);
-            sendAck(ackpacket);
-        }
-
-        lastScreenUpdate = millis();
+        lastServiceUpdate = millis();
     }
+    
+    if (lora_idle && millis() - lastAckUpdate > ackUpdateFrequency)
+    {
+      if (!ackConfirmed && acksRemaining)
+      {
+          --acksRemaining;
+          delay(100);
+          sendAck(ackpacket);
+      }
+
+      //lastAckUpdate = millis();
+    }
+
 
     if(lora_idle && millis() - lastStatusSend > statusSendFreqSec * 1000UL)
     {
@@ -497,6 +507,7 @@ void Receiver::sendAck(char *packet)
 
     send(packet, strlen(packet));
 
+    lastAckUpdate = millis();
 
 //     lora_idle = false;
 //    // Radio.Send((uint8_t *)packet, strlen(packet)); // send the package out

@@ -270,8 +270,8 @@ void Controller::sendDiscovery() {
     const char *rxStatusPayload = "{\"name\":\"Receiver Status\",\"state_topic\":\"pump_station/status/receiver\",\"value_template\":\"{{ value_json.state }}\",\"json_attributes_topic\":\"pump_station/status/receiver\",\"unique_id\":\"pump_station_rx_status\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"Heltec WiFi LoRa 32 V3\",\"manufacturer\":\"Heltec\"}}";
     mqttClient.publish(rxStatusTopic, rxStatusPayload, true);
 
-    const char *rxBattDailyTopic = "homeassistant/sensor/pump_station_rx_batt_daily/config";
-    const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_rx_batt_daily\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"Heltec WiFi LoRa 32 V3\",\"manufacturer\":\"Heltec\"}}";
+    const char *rxBattDailyTopic = "homeassistant/sensor/pump_station_batt_daily/config";
+    const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_batt_daily\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"Heltec WiFi LoRa 32 V3\",\"manufacturer\":\"Heltec\"}}";
     mqttClient.publish(rxBattDailyTopic, rxBattDailyPayload, true);
 }
 
