@@ -28,7 +28,7 @@ BatteryMonitor::BatteryMonitor(uint8_t adcPin, float r1, float r2, float vRef, i
       _sampleIndex(0), _bufferFilled(false),
       _lowThreshold(3.2), _highThreshold(4.1),
       _vEmpty(3.0), _vFull(4.2),
-      _chargeState(STABLE), _pendingState(STABLE), _stateStreak(0),
+      _chargeState(DISCHARGING), _stateStreak(0),
       _emaShort(0.0f), _emaLong(0.0f), _emaInitialized(false),
       _ucVoltage(true), _ucLinearPct(true), _ucCurvePct(true), _ucState(true),
       _dailyMinV(99.0), _dailyMaxV(0.0), _dailySumV(0.0),
@@ -134,28 +134,20 @@ void BatteryMonitor::update() {
     float delta = _emaShort - _emaLong;
     const float hysteresis = 0.01f;
 
-    ChargeState candidate;
+    ChargeState candidate = _chargeState;
     if (delta > hysteresis) {
         candidate = CHARGING;
     } else if (delta < -hysteresis) {
         candidate = DISCHARGING;
-    } else {
-        candidate = STABLE;
     }
 
-    if (candidate == _chargeState) {
-        _stateStreak = 0;
-        _pendingState = candidate;
-    } else {
-        if (candidate == _pendingState) {
-            if (++_stateStreak >= 3) {
-                _chargeState = candidate;
-                _stateStreak = 0;
-            }
-        } else {
-            _pendingState = candidate;
-            _stateStreak = 1;
+    if (candidate != _chargeState) {
+        if (++_stateStreak >= 3) {
+            _chargeState = candidate;
+            _stateStreak = 0;
         }
+    } else {
+        _stateStreak = 0;
     }
 
     updateDailyStats();
