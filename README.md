@@ -37,6 +37,7 @@ Flash the compiled firmware to two boards. Set `isController` as required before
 - `pump_station/tx_power/receiver/set` – integer transmit power in dBm for the receiver.
 - `pump_station/wifi/connect` – ask the receiver to join the default WiFi network and enable OTA updates.
 - `pump_station/wifi/connect_custom` – payload `SSID:PASSWORD` to join a specific network for OTA.
+- `pump_station/wifi/disable` – disconnect the receiver from WiFi and disable OTA updates.
 
 ### Home Assistant Discovery
 
