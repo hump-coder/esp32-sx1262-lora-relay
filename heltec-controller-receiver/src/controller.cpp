@@ -239,6 +239,19 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
         sendMessage(msg);
         receiverStatusFreqSec = f;
         Settings::setInt(KEY_RX_STATUS_FREQ, receiverStatusFreqSec);
+    } else if(strcmp(topic, "pump_station/wifi/connect") == 0) {
+        ++mStateId;
+        sendMessage("WIFI");
+    } else if(strcmp(topic, "pump_station/wifi/connect_custom") == 0) {
+        int idx = cmd.indexOf(':');
+        if(idx > 0) {
+            String ssid = cmd.substring(0, idx);
+            String pass = cmd.substring(idx + 1);
+            char msg[BUFFER_SIZE];
+            snprintf(msg, sizeof(msg), "WIFI:%s:%s", ssid.c_str(), pass.c_str());
+            ++mStateId;
+            sendMessage(msg);
+        }
     } else if(strcmp(topic, "pump_station/switch/state") == 0) {
         initialStateReceived = true;
         retainedStateOn = cmd.startsWith("ON");
@@ -331,6 +344,8 @@ void Controller::ensureMqtt() {
     mqttClient.subscribe("pump_station/tx_power/receiver/set");
     mqttClient.subscribe("pump_station/status_freq/controller/set");
     mqttClient.subscribe("pump_station/status_freq/receiver/set");
+    mqttClient.subscribe("pump_station/wifi/connect");
+    mqttClient.subscribe("pump_station/wifi/connect_custom");
     mqttClient.subscribe("pump_station/switch/state");
 
     // Process any retained messages (such as the last set command or state)
@@ -665,6 +680,11 @@ void Controller::processReceived(char *rxpacket)
             else if(strcasecmp(strings[2], "status") == 0)
             {
                 Serial.println("Status command acknowledged");
+                ++mStateId;
+            }
+            else if(strcasecmp(strings[2], "wifi") == 0)
+            {
+                Serial.println("Receiver WiFi command acknowledged");
                 ++mStateId;
             }
             else
