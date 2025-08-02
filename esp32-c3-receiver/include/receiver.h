@@ -4,6 +4,7 @@
 #include "device.h"
 #include "device-config.h"
 #include "settings.h"
+#include "BatteryMonitor.h"
 
 
 class Receiver : public Device
@@ -29,6 +30,8 @@ class Receiver : public Device
     void sendHello();
     void updateDisplay();
     void setIdle();
+    int getWifiState();
+    void updateStatusCache();
     private:
     
     String mLastMessage;
@@ -49,6 +52,9 @@ class Receiver : public Device
     unsigned long lastStatusSend = 0;
     bool pendingDailyStats = false;
     bool mIsTransmitting = false;
+    int lastBatteryPct = -1;
+    ChargeState lastChargeState = STABLE;
+    int lastWifiState = WIFI_DISABLED;
     void sendAck(char *rxpacket);
     void setRelayState(bool newRelayState);
     void processReceived(char *rxpacket);

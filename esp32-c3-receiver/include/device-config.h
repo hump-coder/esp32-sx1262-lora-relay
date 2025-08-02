@@ -40,7 +40,7 @@
 #define DEFAULT_ON_TIME_SEC                         300
 
 // Default frequency in seconds to send a status update
-#define DEFAULT_STATUS_SEND_FREQ_SEC                60
+#define DEFAULT_STATUS_SEND_FREQ_SEC                300
 
 // Milliseconds to wait without receiving any packets from the receiver
 // before marking the relay state as unknown.
