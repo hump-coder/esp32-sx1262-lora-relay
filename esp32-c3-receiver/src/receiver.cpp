@@ -444,21 +444,22 @@ void Receiver::sendStatus()
 
 int Receiver::getWifiState()
 {
-    int wifi = WIFI_DISABLED;
+    // If the WiFi subsystem is not started, report disabled regardless of status
+    if (WiFi.getMode() == WIFI_MODE_NULL) {
+        return WIFI_DISABLED;
+    }
+
     wl_status_t st = WiFi.status();
-    if (st == WL_CONNECTED)
-    {
-        wifi = WIFI_CONNECTED;
+    if (st == WL_CONNECTED) {
+        return WIFI_CONNECTED;
     }
-    else if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS)
-    {
-        wifi = WIFI_CONNECTING;
+    if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS) {
+        return WIFI_CONNECTING;
     }
-    else if (st != WL_NO_SHIELD)
-    {
-        wifi = WIFI_ERROR;
+    if (st != WL_NO_SHIELD) {
+        return WIFI_ERROR;
     }
-    return wifi;
+    return WIFI_DISABLED;
 }
 
 void Receiver::updateStatusCache()
