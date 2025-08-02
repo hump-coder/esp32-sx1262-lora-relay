@@ -10,6 +10,8 @@
 #include "device-config.h"
 #include "settings.h"
 
+struct DailyStats;
+
 enum RelayState
 {
     UNKNOWN,
@@ -68,6 +70,7 @@ private:
 
     void publishControllerStatus();
     void publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int battery);
+    void publishReceiverDailyStats(const struct DailyStats &stats);
 
     void setSendStatusFrequency(unsigned int freq);
     unsigned int getSendStatusFrequency() const { return statusSendFreqSec; }
