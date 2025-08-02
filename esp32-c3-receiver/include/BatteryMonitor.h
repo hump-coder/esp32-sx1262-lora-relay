@@ -29,6 +29,7 @@ public:
     void setVoltageRange(float vEmpty, float vFull);
     float getPercentage() const;
     float getPercentageCurve() const;
+    float getFilteredPercentage() const;
 
     // Charge state
     ChargeState getChargeState() const;
@@ -114,6 +115,10 @@ private:
     unsigned long _lastDebugPrint;
     float _lastRawAvg;
     float _calibrationFactor;
+    float _filteredSOC;
+    bool _filteredSOCInitialized;
+    float _alphaDown;
+    float _alphaUp;
 };
 
 extern BatteryMonitor battery;
