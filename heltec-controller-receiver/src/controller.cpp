@@ -4,6 +4,7 @@
 #include <SPI.h>
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
+#include <ArduinoOTA.h>
 
 #include "config.h"
 #include "display.h"
@@ -392,6 +393,8 @@ void Controller::setup() {
         delay(500);
     }
     Serial.println("Init Wifi - complete");
+    ArduinoOTA.setHostname("heltec-pump-controller");
+    ArduinoOTA.begin();
 
     //
     // Setup radio.
@@ -533,6 +536,7 @@ void Controller::pulseRelay(unsigned int onTime)
 
 
 void Controller::loop() {
+    ArduinoOTA.handle();
     if(autoOffTime && millis() > autoOffTime) {
         autoOffTime = 0;
         heartbeatEnabled = false;

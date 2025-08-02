@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
+#include <ArduinoOTA.h>
 
 #include "config.h"
 #include "display.h"
@@ -117,6 +118,8 @@ void Receiver::setup()
             delay(500);
         }
         Serial.println("Init Wifi - complete");
+        ArduinoOTA.setHostname("heltec-pump-receiver");
+        ArduinoOTA.begin();
     }
     Mcu.begin();
 
@@ -228,6 +231,10 @@ unsigned long lastScreenUpdate = 0;
 
 void Receiver::loop()
 {
+    if (mWifiEnabled && WiFi.status() == WL_CONNECTED)
+    {
+        ArduinoOTA.handle();
+    }
     if(mRelayState && offTime && millis() > offTime) {
         setRelayState(false);
     }
