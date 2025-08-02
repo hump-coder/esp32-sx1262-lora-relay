@@ -89,6 +89,9 @@ private:
     // Timestamp of the last packet received from the receiver
     unsigned long lastContactTime = 0;
 
+    // Next time to refresh the ON command before receiver timeout
+    unsigned long nextRelayRefresh = 0;
+
     // Outgoing message queue
     struct OutgoingMessage {
         String type;
