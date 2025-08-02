@@ -200,7 +200,24 @@ void Receiver::sendHello()
 void Receiver::sendStatus()
 {
     int battery = mBattery.getPercentage();
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, battery);
+    int wifi = WIFI_DISABLED;
+    if (mWifiEnabled)
+    {
+        wl_status_t st = WiFi.status();
+        if (st == WL_CONNECTED)
+        {
+            wifi = WIFI_CONNECTED;
+        }
+        else if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS)
+        {
+            wifi = WIFI_CONNECTING;
+        }
+        else
+        {
+            wifi = WIFI_ERROR;
+        }
+    }
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, battery, wifi);
     Serial.printf("Sending status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
     lora_idle = false;
     Radio.Send((uint8_t *)txpacket, strlen(txpacket));
