@@ -427,8 +427,23 @@ void Receiver::sendHello()
 
 void Receiver::sendStatus()
 {
-    int b = (int) battery.getPercentage();
-    int state = static_cast<int>(battery.getChargeState());
+    updateStatusCache();
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, lastBatteryPct, static_cast<int>(lastChargeState), lastWifiState);
+
+    pendingDailyStats = true;
+    send(txpacket, strlen(txpacket));
+    Serial.printf("Sent status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
+
+    
+    // lora_idle = false;
+    // // Radio.Send((uint8_t *)txpacket, strlen(txpacket));
+    // transmissionState = radio.startTransmit((uint8_t *)txpacket, strlen(txpacket));
+
+    // Serial.println("status sent.");
+}
+
+int Receiver::getWifiState()
+{
     int wifi = WIFI_DISABLED;
     wl_status_t st = WiFi.status();
     if (st == WL_CONNECTED)
@@ -443,18 +458,14 @@ void Receiver::sendStatus()
     {
         wifi = WIFI_ERROR;
     }
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
+    return wifi;
+}
 
-    pendingDailyStats = true;
-    send(txpacket, strlen(txpacket));
-    Serial.printf("Sent status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
-
-    
-    // lora_idle = false;
-    // // Radio.Send((uint8_t *)txpacket, strlen(txpacket));
-    // transmissionState = radio.startTransmit((uint8_t *)txpacket, strlen(txpacket));
-
-    // Serial.println("status sent.");
+void Receiver::updateStatusCache()
+{
+    lastBatteryPct = (int)battery.getPercentage();
+    lastChargeState = battery.getChargeState();
+    lastWifiState = getWifiState();
 }
 
 void Receiver::sendDailyStats()
@@ -484,7 +495,17 @@ void Receiver::loop()
 
     if (millis() - lastServiceUpdate > serviceUpdateFrequency)
     {
-        battery.getPercentage();
+        int b = (int)battery.getPercentage();
+        ChargeState cs = battery.getChargeState();
+        int wifi = getWifiState();
+        if (b != lastBatteryPct || cs != lastChargeState || wifi != lastWifiState)
+        {
+            if (lora_idle)
+            {
+                sendStatus();
+                lastStatusSend = millis();
+            }
+        }
         updateDisplay();
         lastServiceUpdate = millis();
     }
