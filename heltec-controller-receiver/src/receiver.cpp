@@ -50,6 +50,7 @@ Receiver::Receiver(Display &display, Battery &battery, bool enableWifi) : mDispl
     ackStateId = 0;
     ackConfirmed = true;
     lastStatusSend = 0;
+    otaEnabled = false;
 }
 
 void Receiver::updateDisplay()
@@ -111,15 +112,7 @@ void Receiver::setup()
 
     if (mWifiEnabled)
     {
-        Serial.println("Init Wifi");
-        WiFi.begin(WIFI_SSID, WIFI_PASS);
-        while (WiFi.status() != WL_CONNECTED)
-        {
-            delay(500);
-        }
-        Serial.println("Init Wifi - complete");
-        ArduinoOTA.setHostname("heltec-pump-receiver");
-        ArduinoOTA.begin();
+        connectWifi(WIFI_SSID, WIFI_PASS);
     }
     Mcu.begin();
 
@@ -202,25 +195,23 @@ void Receiver::sendHello()
 
 void Receiver::sendStatus()
 {
-    int battery = mBattery.getPercentage();
+    int b = mBattery.getPercentage();
+    int state = mBattery.isCharging() ? 0 : 1;
     int wifi = WIFI_DISABLED;
-    if (mWifiEnabled)
+    wl_status_t st = WiFi.status();
+    if (st == WL_CONNECTED)
     {
-        wl_status_t st = WiFi.status();
-        if (st == WL_CONNECTED)
-        {
-            wifi = WIFI_CONNECTED;
-        }
-        else if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS)
-        {
-            wifi = WIFI_CONNECTING;
-        }
-        else
-        {
-            wifi = WIFI_ERROR;
-        }
+        wifi = WIFI_CONNECTED;
     }
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, battery, wifi);
+    else if (st == WL_DISCONNECTED || st == WL_IDLE_STATUS)
+    {
+        wifi = WIFI_CONNECTING;
+    }
+    else if (st != WL_NO_SHIELD)
+    {
+        wifi = WIFI_ERROR;
+    }
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
     Serial.printf("Sending status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
     lora_idle = false;
     Radio.Send((uint8_t *)txpacket, strlen(txpacket));
@@ -231,7 +222,7 @@ unsigned long lastScreenUpdate = 0;
 
 void Receiver::loop()
 {
-    if (mWifiEnabled && WiFi.status() == WL_CONNECTED)
+    if (otaEnabled)
     {
         ArduinoOTA.handle();
     }
@@ -350,6 +341,14 @@ void Receiver::processReceived(char *rxpacket)
         } else if(strcasecmp(strings[2], "pwr") == 0 && index >= 4) {
             int power = atoi(strings[3]);
             setTxPower(power);
+        } else if(strcasecmp(strings[2], "wifi") == 0) {
+            if (index >= 4 && strcasecmp(strings[3], "off") == 0) {
+                disableWifi();
+            } else {
+                const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
+                const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
+                connectWifi(ssid, pass);
+            }
         } else {
             bool newRelayState = false;
             if(strcasecmp(strings[2], "on") == 0 || strcasecmp(strings[2], "pulse") == 0) {
@@ -367,6 +366,41 @@ void Receiver::processReceived(char *rxpacket)
         ackStateId = stateId;
         ackConfirmed = false;
         acksRemaining = 4;
+    }
+}
+
+void Receiver::connectWifi(const char *ssid, const char *pass)
+{
+    if(!mWifiEnabled)
+    {
+        return;
+    }
+    Serial.println("Connecting to WiFi for OTA");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, pass);
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+        delay(500);
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("WiFi connected, starting OTA");
+        ArduinoOTA.setHostname("heltec-pump-receiver");
+        ArduinoOTA.begin();
+        otaEnabled = true;
+    } else {
+        Serial.println("WiFi connection failed");
+    }
+}
+
+void Receiver::disableWifi()
+{
+    Serial.println("Disabling WiFi and OTA");
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_MODE_NULL);
+    if (otaEnabled)
+    {
+        ArduinoOTA.end();
+        otaEnabled = false;
     }
 }
 
