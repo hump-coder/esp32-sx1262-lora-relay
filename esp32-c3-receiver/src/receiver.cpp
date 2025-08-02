@@ -4,6 +4,7 @@
 
 #include "config.h"
 #include "device-config.h"
+#include "config-private.h"
 #include "settings.h"
 #include "receiver.h"
 
@@ -12,6 +13,7 @@
 #include <ArduinoOTA.h>
 
 #define RELAY_PIN 1
+#define DEVICE_NAME "dam-pump-receiver-c3-sx1262"
 
 
 // // XL1262 LoRa pin mapping to ESP32-C3
@@ -573,6 +575,7 @@ void Receiver::connectWifi(const char *ssid, const char *pass)
     }
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println("WiFi connected, starting OTA");
+        ArduinoOTA.setHostname(DEVICE_NAME);
         ArduinoOTA.begin();
         otaEnabled = true;
     } else {

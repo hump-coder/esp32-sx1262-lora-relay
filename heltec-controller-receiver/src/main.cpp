@@ -6,7 +6,7 @@
 #include "display.h"
 #include "battery.h"
 
-bool isController = false;
+bool isController = true;
 bool enableWifi = isController;
 
 Device *device = 0;
