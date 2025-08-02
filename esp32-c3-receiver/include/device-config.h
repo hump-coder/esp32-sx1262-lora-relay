@@ -42,6 +42,10 @@
 // Default frequency in seconds to send a status update
 #define DEFAULT_STATUS_SEND_FREQ_SEC                300
 
+// Minimum percent change in battery level before sending an immediate status
+// update. Smaller fluctuations are ignored to reduce chatter.
+#define BATTERY_PERCENT_CHANGE_THRESHOLD            2
+
 // Milliseconds to wait without receiving any packets from the receiver
 // before marking the relay state as unknown.
 #define COMMUNICATION_TIMEOUT_MS                    60000

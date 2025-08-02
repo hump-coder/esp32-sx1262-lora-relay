@@ -498,7 +498,10 @@ void Receiver::loop()
         int b = (int)battery.getPercentage();
         ChargeState cs = battery.getChargeState();
         int wifi = getWifiState();
-        if (b != lastBatteryPct || cs != lastChargeState || wifi != lastWifiState)
+        // Only trigger an immediate status send if battery percent changed
+        // significantly to avoid oscillations causing message spam.
+        if (abs(b - lastBatteryPct) >= BATTERY_PERCENT_CHANGE_THRESHOLD ||
+            cs != lastChargeState || wifi != lastWifiState)
         {
             if (lora_idle)
             {
