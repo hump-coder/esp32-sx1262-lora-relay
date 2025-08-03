@@ -50,7 +50,7 @@ class Receiver : public Device
     unsigned long lastStatusSend = 0;
     bool pendingDailyStats = false;
     bool mIsTransmitting = false;
-    int lastBatteryPct = -1;
+    float lastBatteryPct = -1;
     ChargeState lastChargeState = DISCHARGING;
     int lastWifiState = WIFI_DISABLED;
     void sendAck(uint16_t id, const char *status);

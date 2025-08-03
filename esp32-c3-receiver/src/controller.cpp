@@ -115,16 +115,16 @@ void Controller::publishState() {
 
 void Controller::publishControllerStatus() {
     char payload[128];
-    int batt = (int)battery.getFilteredPercentage();
+    float batt = battery.getFilteredPercentage();
     snprintf(payload, sizeof(payload),
-             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%d}",
+             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%.1f}",
              txPower, mLastRssi, mLastSnr,
              relayStateToString(relayState).c_str(),
              pulseMode ? "pulse" : "normal", batt);
     mqttClient.publish("pump_station/status/controller", payload, true);
 }
 
-void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, int batteryPct,
+void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, float batteryPct,
                                        int chargeState, int wifi) {
     char payload[200];
     const char *charge;
@@ -142,7 +142,7 @@ void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay,
         default: wifiState = "UNKNOWN"; break;
     }
     snprintf(payload, sizeof(payload),
-             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%d,\"charge\":\"%s\",\"wifi\":\"%s\"}",
+             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%.1f,\"charge\":\"%s\",\"wifi\":\"%s\"}",
              power, rssi, snr,
              relay ? "ON" : "OFF",
              pulse ? "pulse" : "normal", batteryPct,
@@ -476,7 +476,7 @@ void Controller::processReceived(char *rxpacket) {
                 int snr = atoi(strings[3]);
                 bool state = atoi(strings[4]);
                 bool pulse = atoi(strings[5]);
-                int batt = atoi(strings[6]);
+                float batt = atof(strings[6]);
                 int cstate = -1;
                 int wifi = WIFI_DISABLED;
                 if(index >= 9) {
