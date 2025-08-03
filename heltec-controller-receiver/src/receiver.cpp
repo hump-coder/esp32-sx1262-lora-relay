@@ -81,10 +81,10 @@ void Receiver::updateDisplay()
     mDisplay.display.setCursor(x, y);
 
     float voltage = mBattery.getVoltage();
-    int batt = mBattery.getPercentage();
+    float batt = mBattery.getPercentage();
     bool chg = mBattery.isCharging();
 
-    mDisplay.display.printf("BAT: %.2fv  %d%% %s", voltage, batt, chg ? "CHG" : " ");
+    mDisplay.display.printf("BAT: %.2fv  %.1f%% %s", voltage, batt, chg ? "CHG" : " ");
 
     mDisplay.display.display();
 }
@@ -186,7 +186,7 @@ void Receiver::sendHello()
 
 void Receiver::sendStatus()
 {
-    int b = mBattery.getPercentage();
+    float b = mBattery.getPercentage();
     int state = mBattery.isCharging() ? 0 : 1;
     int wifi = WIFI_DISABLED;
     wl_status_t st = WiFi.status();
@@ -202,7 +202,7 @@ void Receiver::sendStatus()
     {
         wifi = WIFI_ERROR;
     }
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%.1f:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
     Serial.printf("Sending status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
     lora_idle = false;
     Radio.Send((uint8_t *)txpacket, strlen(txpacket));
