@@ -11,6 +11,7 @@
 #include <RadioLib.h>
 #include "BatteryMonitor.h"
 #include <ArduinoOTA.h>
+#include <math.h>
 
 #define RELAY_PIN 1
 #define DEVICE_NAME "dam-pump-receiver-c3-sx1262"
@@ -422,7 +423,7 @@ void Receiver::sendHello()
 void Receiver::sendStatus()
 {
     updateStatusCache();
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%d:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, lastBatteryPct, static_cast<int>(lastChargeState), lastWifiState);
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%.1f:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, lastBatteryPct, static_cast<int>(lastChargeState), lastWifiState);
 
     pendingDailyStats = true;
     send(txpacket, strlen(txpacket));
@@ -458,7 +459,7 @@ int Receiver::getWifiState()
 
 void Receiver::updateStatusCache()
 {
-    lastBatteryPct = (int)battery.getFilteredPercentage();
+    lastBatteryPct = battery.getFilteredPercentage();
     lastChargeState = battery.getChargeState();
     lastWifiState = getWifiState();
 }
@@ -488,12 +489,12 @@ void Receiver::loop()
 
     if (millis() - lastServiceUpdate > serviceUpdateFrequency)
     {
-        int b = (int)battery.getFilteredPercentage();
+        float b = battery.getFilteredPercentage();
         ChargeState cs = battery.getChargeState();
         int wifi = getWifiState();
         // Only trigger an immediate status send if battery percent changed
         // significantly to avoid oscillations causing message spam.
-        if (abs(b - lastBatteryPct) >= BATTERY_PERCENT_CHANGE_THRESHOLD ||
+        if (fabs(b - lastBatteryPct) >= BATTERY_PERCENT_CHANGE_THRESHOLD ||
             cs != lastChargeState || wifi != lastWifiState)
         {
             if (lora_idle)
