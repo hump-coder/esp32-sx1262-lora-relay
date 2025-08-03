@@ -1,4 +1,5 @@
 #include "battery.h"
+#include <math.h>
 
 #define VBAT_Read 1
 #define ADC_Ctrl 37
@@ -11,22 +12,21 @@ void Battery::setup()
     analogSetAttenuation(ADC_11db);
 }
 
-int Battery::getPercentage()
-{    
-    const float min = 3.0;
-    const float max = 4.2;
+float Battery::getPercentage()
+{
+    const float min = 3.0f;
+    const float max = 4.2f;
 
     readBatteryVoltage();
 
-    // float voltage = getVoltage();
-    int percent = floor(((mVoltage - min) / (max - min)) * 100);
+    float percent = ((mVoltage - min) / (max - min)) * 100.0f;
+    // Round to one decimal place
+    percent = roundf(percent * 10.0f) / 10.0f;
 
-    // Serial.printf("RAW BAT: percent: %d%% volts: %.2f\n", percent, mVoltage);
-
-    if (percent < 0)
-        percent = 0;
-    if (percent > 100)
-        percent = 100;
+    if (percent < 0.0f)
+        percent = 0.0f;
+    if (percent > 100.0f)
+        percent = 100.0f;
     return percent;
 }
 

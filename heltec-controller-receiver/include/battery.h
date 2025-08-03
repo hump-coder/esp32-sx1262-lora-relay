@@ -8,7 +8,7 @@ class Battery {
 public:
     Battery();
     void setup();
-    int getPercentage();
+    float getPercentage();
     float getVoltage();
     bool isCharging();
 
