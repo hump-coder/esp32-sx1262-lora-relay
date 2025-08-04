@@ -1,6 +1,6 @@
 #include "BatteryMonitor.h"
 #include <esp32-hal-adc.h>
-#include "device-config.h"
+#include "config.h"
 
 // Global instance
 // Use a divider that keeps the ADC reading well away from the

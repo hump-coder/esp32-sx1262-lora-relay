@@ -3,8 +3,7 @@
 #include "Arduino.h"
 
 #include "config.h"
-#include "device-config.h"
-#include "config-private.h"
+#include "config.h"
 #include "settings.h"
 #include "receiver.h"
 

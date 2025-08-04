@@ -4,7 +4,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "device.h"
-#include "device-config.h"
+#include "config.h"
 #include "settings.h"
 #include "BatteryMonitor.h"
 #include <deque>

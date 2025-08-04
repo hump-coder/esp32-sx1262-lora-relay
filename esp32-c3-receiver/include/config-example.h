@@ -1,5 +1,10 @@
 #pragma once
 
+//
+// Copy this file to config-private.h and change the values to match your environment.
+//
+
+
 #define WIFI_SSID "your ssid"
 #define WIFI_PASS "your wifi pass"
 

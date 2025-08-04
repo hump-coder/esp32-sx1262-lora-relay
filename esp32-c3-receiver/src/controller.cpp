@@ -6,8 +6,6 @@
 #include <RadioLib.h>
 
 #include "config.h"
-#include "device-config.h"
-#include "config-private.h"
 #include "settings.h"
 #include "BatteryMonitor.h"
 #include "controller.h"
