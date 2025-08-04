@@ -297,7 +297,9 @@ void Receiver::processReceived(char *rxpacket)
     {
         uint16_t stateId = atoi(strings[1]);
         const char *resp = NULL;
-        bool duplicate = stateId <= lastCommandId;
+        // Use signed arithmetic to handle 16-bit wrap-around of state IDs
+        int16_t diff = static_cast<int16_t>(stateId - lastCommandId);
+        bool duplicate = diff <= 0;
 
         if(strcasecmp(strings[2], "status") == 0) {
             sendStatus();
