@@ -6,7 +6,7 @@
 #include "BatteryMonitor.h"
 
 
-bool isController = true;
+bool isController = false;
 bool enableWifi = isController;
 
 Device *device = 0;
