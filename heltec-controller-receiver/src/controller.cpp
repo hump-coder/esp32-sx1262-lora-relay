@@ -432,9 +432,9 @@ void Controller::setup() {
     ensureMqtt();
     sendDiscovery();
     publishState();
+    sendMessage("SYNC");
     {
         char msg[16];
-        ++mStateId;
         sprintf(msg, "FREQ:%u", receiverStatusFreqSec);
         sendMessage(msg);
     }
