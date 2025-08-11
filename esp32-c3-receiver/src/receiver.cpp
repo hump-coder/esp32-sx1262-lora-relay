@@ -618,7 +618,10 @@ void Receiver::processReceived(char *rxpacket)
         int16_t diff = static_cast<int16_t>(stateId - lastCommandId);
         bool duplicate = diff <= 0;
 
-        if(strcasecmp(strings[2], "status") == 0) {
+        if(strcasecmp(strings[2], "sync") == 0) {
+            duplicate = false;
+            resp = "sync";
+        } else if(strcasecmp(strings[2], "status") == 0) {
             sendStatus();
             resp = "status";
         } else if(strcasecmp(strings[2], "freq") == 0 && index >= 4) {
