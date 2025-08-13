@@ -246,6 +246,8 @@ void Controller::sendDiscovery() {
     mqttClient.publish("homeassistant/sensor/pump_station_rx_status/config", rxStatusPayload, true);
     const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_batt_daily\"}";
     mqttClient.publish("homeassistant/sensor/pump_station_batt_daily/config", rxBattDailyPayload, true);
+    const char *statsPayload = "{\"name\":\"Pump Stats\",\"state_topic\":\"pump_station/status/stats\",\"value_template\":\"{{ value_json.uptime }}\",\"unit_of_measurement\":\"s\",\"json_attributes_topic\":\"pump_station/status/stats\",\"unique_id\":\"pump_station_stats\"}";
+    mqttClient.publish("homeassistant/sensor/pump_station_stats/config", statsPayload, true);
 }
 
 void Controller::ensureMqtt() {
