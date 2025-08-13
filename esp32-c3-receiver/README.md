@@ -1,6 +1,15 @@
 # esp32-c3-SX1262-LoRa-Receiver
 LoRa SX1262 receiver component tailored for the ESP32 C3 with an 18650 battery management board.
 
+## Building
+
+1. Copy `include/config-example.h` to `include/config-private.h` and set your WiFi and MQTT credentials.
+2. Build the firmware with PlatformIO:
+
+```bash
+pio run
+```
+
 ## Battery voltage divider
 
 The ADC on the ESP32 is not very linear near 0 or full scale. To keep

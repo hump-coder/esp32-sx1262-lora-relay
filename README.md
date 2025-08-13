@@ -3,23 +3,23 @@
 This repository contains 2 platformio projects:
 
 - heltec-controller-receiver, targeting the Heltec LoRa v3 board.
-- esp32-cs-receiver, targeting generic ESP32 C3 with a SX1262 module.
+- esp32-c3-receiver, targeting generic ESP32 C3 with a SX1262 module.
 
 
 # heltec-controller-receiver
 
-A PlatformIO project for a LoRa based pump control system using Heltec WiFi LoRa 32 V3 boards. Two identical devices communicate over LoRa and can operate in one of two roles controlled by the `isController` flag in `pump-controller/src/main.cpp`.
+A PlatformIO project for a LoRa based pump control system using Heltec WiFi LoRa 32 V3 boards. Two identical devices communicate over LoRa and can operate in one of two roles controlled by the `isController` flag in `heltec-controller-receiver/src/main.cpp`.
 
 - **Controller mode** (`isController = true`): connects to WiFi and MQTT, sends `ON`/`OFF` messages and processes acknowledgements.
 - **Receiver mode** (`isController = false`): listens for LoRa commands and toggles a relay. WiFi is disabled by default.
 
 ## Building
 
-1. Copy `pump-controller/include/config-example.h` to `pump-controller/include/config.h` and enter your WiFi and MQTT credentials.
+1. Copy `heltec-controller-receiver/include/config-example.h` to `heltec-controller-receiver/include/config-private.h` and enter your WiFi and MQTT credentials.
 2. Build the firmware with PlatformIO:
 
 ```bash
-cd pump-controller
+cd heltec-controller-receiver
 pio run
 ```
 
@@ -65,6 +65,16 @@ topic is retained as `ON`, the controller issues a fresh `ON` command so the
 receiver resumes operation.
 
 
-# esp32-cs-receiver
+# esp32-c3-receiver
 
-The receiver only component - no display but has battery charging information sent to controller.
+The receiver-only component – no display but it reports battery charging information to the controller.
+
+## Building
+
+1. Copy `esp32-c3-receiver/include/config-example.h` to `esp32-c3-receiver/include/config-private.h` and update it with your WiFi and MQTT settings.
+2. Build the firmware with PlatformIO:
+
+```bash
+cd esp32-c3-receiver
+pio run
+```
