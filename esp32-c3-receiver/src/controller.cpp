@@ -156,35 +156,18 @@ void Controller::publishReceiverDailyStats(const DailyStats &stats) {
     mqttClient.publish("pump_station/status/receiver/battery_daily", payload, true);
 }
 
-void Controller::resetWindow(StatsWindow &w, unsigned long now, unsigned long period) {
-    if (w.start == 0 || now - w.start >= period) {
-        w.start = now;
-        w.msgsSent = w.msgsReceived = w.bytesSent = w.bytesReceived = 0;
-    }
-}
-
 void Controller::updateStats(size_t bytes, bool sent) {
     unsigned long now = millis();
-    resetWindow(minuteStats, now, 60000UL);
-    resetWindow(hourStats, now, 3600000UL);
-    resetWindow(dayStats, now, 86400000UL);
-    StatsWindow *windows[3] = {&minuteStats, &hourStats, &dayStats};
-    for (auto w : windows) {
-        if (sent) {
-            w->msgsSent++;
-            w->bytesSent += bytes;
-        } else {
-            w->msgsReceived++;
-            w->bytesReceived += bytes;
-        }
-    }
+    minuteStats.add(now, bytes, sent);
+    hourStats.add(now, bytes, sent);
+    dayStats.add(now, bytes, sent);
 }
 
 void Controller::publishStatistics() {
     unsigned long now = millis();
-    resetWindow(minuteStats, now, 60000UL);
-    resetWindow(hourStats, now, 3600000UL);
-    resetWindow(dayStats, now, 86400000UL);
+    minuteStats.prune(now);
+    hourStats.prune(now);
+    dayStats.prune(now);
     unsigned long uptime = (now - bootTime) / 1000UL;
     char payload[256];
     snprintf(payload, sizeof(payload),
@@ -296,7 +279,6 @@ void Controller::ensureMqtt() {
 void Controller::setup() {
     Settings::begin();
     bootTime = millis();
-    minuteStats.start = hourStats.start = dayStats.start = bootTime;
     txPower = Settings::getInt(KEY_CTRL_TX_POWER, TX_OUTPUT_POWER);
     receiverTxPower = Settings::getInt(KEY_RX_TX_POWER, TX_OUTPUT_POWER);
     statusSendFreqSec = Settings::getInt(KEY_CTRL_STATUS_FREQ, DEFAULT_STATUS_SEND_FREQ_SEC);
