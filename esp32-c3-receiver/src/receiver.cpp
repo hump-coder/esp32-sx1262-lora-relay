@@ -614,33 +614,27 @@ void Receiver::processReceived(char *rxpacket)
     {
         uint16_t stateId = atoi(strings[1]);
         const char *resp = NULL;
-        // Use signed arithmetic to handle 16-bit wrap-around of state IDs
-        int16_t diff = static_cast<int16_t>(stateId - lastCommandId);
-        bool duplicate = diff <= 0;
 
         if(strcasecmp(strings[2], "sync") == 0) {
-            duplicate = false;
             resp = "sync";
         } else if(strcasecmp(strings[2], "status") == 0) {
             sendStatus();
             resp = "status";
         } else if(strcasecmp(strings[2], "freq") == 0 && index >= 4) {
             int freq = atoi(strings[3]);
-            if(!duplicate) setSendStatusFrequency(freq);
+            setSendStatusFrequency(freq);
             resp = "freq";
         } else if(strcasecmp(strings[2], "pwr") == 0 && index >= 4) {
             int power = atoi(strings[3]);
-            if(!duplicate) setTxPower(power);
+            setTxPower(power);
             resp = "pwr";
         } else if(strcasecmp(strings[2], "wifi") == 0) {
-            if(!duplicate) {
-                if (index >= 4 && strcasecmp(strings[3], "off") == 0) {
-                    disableWifi();
-                } else {
-                    const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
-                    const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
-                    connectWifi(ssid, pass);
-                }
+            if (index >= 4 && strcasecmp(strings[3], "off") == 0) {
+                disableWifi();
+            } else {
+                const char *ssid = (index >= 4) ? strings[3] : WIFI_SSID;
+                const char *pass = (index >= 5) ? strings[4] : WIFI_PASS;
+                connectWifi(ssid, pass);
             }
             resp = "wifi";
         } else {
@@ -654,10 +648,9 @@ void Receiver::processReceived(char *rxpacket)
                 onTimeSec = 0;
             }
             mPulseMode = strcasecmp(strings[2], "pulse") == 0;
-            if(!duplicate) setRelayState(newRelayState);
+            setRelayState(newRelayState);
             resp = newRelayState ? (mPulseMode ? "pulse" : "on") : "off";
         }
-        if(!duplicate) lastCommandId = stateId;
         delay(200);
         sendAck(stateId, resp ? resp : "ok");
     }
