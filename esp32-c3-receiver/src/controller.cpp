@@ -280,6 +280,8 @@ void Controller::setup() {
 
     ensureMqtt();
     lastStatusPublish = millis();
+    sendMessage("SYNC");
+    sendMessage("STATUS");
 }
 
 void Controller::setIdle() {
