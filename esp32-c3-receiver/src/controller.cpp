@@ -158,6 +158,11 @@ void Controller::publishReceiverDailyStats(const DailyStats &stats) {
 
 void Controller::updateStats(size_t bytes, bool sent) {
     unsigned long now = millis();
+    if (sent) {
+        totalMsgsSent++;
+    } else {
+        totalMsgsReceived++;
+    }
     minuteStats.add(now, bytes, sent);
     hourStats.add(now, bytes, sent);
     dayStats.add(now, bytes, sent);
@@ -171,14 +176,15 @@ void Controller::publishStatistics() {
     unsigned long uptime = (now - bootTime) / 1000UL;
     char payload[512];
     snprintf(payload, sizeof(payload),
-             "{\"uptime\":%lu,\"receiver_uptime\":%lu,\"msg_sent_min\":%lu,\"msg_recv_min\":%lu,\"bytes_sent_min\":%lu,\"bytes_recv_min\":%lu,\"msg_sent_hr\":%lu,\"msg_recv_hr\":%lu,\"bytes_sent_hr\":%lu,\"bytes_recv_hr\":%lu,\"msg_sent_day\":%lu,\"msg_recv_day\":%lu,\"bytes_sent_day\":%lu,\"bytes_recv_day\":%lu}",
+             "{\"uptime\":%lu,\"receiver_uptime\":%lu,\"msg_sent_min\":%lu,\"msg_recv_min\":%lu,\"bytes_sent_min\":%lu,\"bytes_recv_min\":%lu,\"msg_sent_hr\":%lu,\"msg_recv_hr\":%lu,\"bytes_sent_hr\":%lu,\"bytes_recv_hr\":%lu,\"msg_sent_day\":%lu,\"msg_recv_day\":%lu,\"bytes_sent_day\":%lu,\"bytes_recv_day\":%lu,\"msg_sent_total\":%lu,\"msg_recv_total\":%lu}",
              uptime, receiverUptimeSec,
              minuteStats.msgsSent, minuteStats.msgsReceived,
              minuteStats.bytesSent, minuteStats.bytesReceived,
              hourStats.msgsSent, hourStats.msgsReceived,
              hourStats.bytesSent, hourStats.bytesReceived,
              dayStats.msgsSent, dayStats.msgsReceived,
-             dayStats.bytesSent, dayStats.bytesReceived);
+             dayStats.bytesSent, dayStats.bytesReceived,
+             totalMsgsSent, totalMsgsReceived);
     mqttClient.publish("pump_station/status/stats", payload, true);
 }
 
