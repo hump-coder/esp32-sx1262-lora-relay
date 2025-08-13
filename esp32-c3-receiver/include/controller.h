@@ -152,10 +152,12 @@ private:
     // Statistics helpers
     void publishStatistics();
     void updateStats(size_t bytes, bool sent);
-    
+
     StatsWindow minuteStats{60000UL};
     StatsWindow hourStats{3600000UL};
     StatsWindow dayStats{86400000UL};
+    unsigned long totalMsgsSent = 0;
+    unsigned long totalMsgsReceived = 0;
     unsigned long bootTime = 0;
     unsigned long receiverUptimeSec = 0;
     unsigned long lastStatsPublish = 0;
