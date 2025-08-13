@@ -169,7 +169,7 @@ void Controller::publishStatistics() {
     hourStats.prune(now);
     dayStats.prune(now);
     unsigned long uptime = (now - bootTime) / 1000UL;
-    char payload[256];
+    char payload[512];
     snprintf(payload, sizeof(payload),
              "{\"uptime\":%lu,\"receiver_uptime\":%lu,\"msg_sent_min\":%lu,\"msg_recv_min\":%lu,\"bytes_sent_min\":%lu,\"bytes_recv_min\":%lu,\"msg_sent_hr\":%lu,\"msg_recv_hr\":%lu,\"bytes_sent_hr\":%lu,\"bytes_recv_hr\":%lu,\"msg_sent_day\":%lu,\"msg_recv_day\":%lu,\"bytes_sent_day\":%lu,\"bytes_recv_day\":%lu}",
              uptime, receiverUptimeSec,
