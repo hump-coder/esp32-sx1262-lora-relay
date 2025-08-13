@@ -14,11 +14,45 @@
 struct DailyStats;
 
 struct StatsWindow {
-    unsigned long start = 0;
+    struct Event {
+        unsigned long time;
+        size_t bytes;
+        bool sent;
+    };
+    unsigned long period;
+    std::deque<Event> events;
     unsigned long msgsSent = 0;
     unsigned long msgsReceived = 0;
     unsigned long bytesSent = 0;
     unsigned long bytesReceived = 0;
+
+    explicit StatsWindow(unsigned long p = 0) : period(p) {}
+
+    void add(unsigned long now, size_t bytes, bool sent) {
+        events.push_back({now, bytes, sent});
+        if (sent) {
+            msgsSent++;
+            bytesSent += bytes;
+        } else {
+            msgsReceived++;
+            bytesReceived += bytes;
+        }
+        prune(now);
+    }
+
+    void prune(unsigned long now) {
+        while (!events.empty() && now - events.front().time >= period) {
+            const auto &e = events.front();
+            if (e.sent) {
+                msgsSent--;
+                bytesSent -= e.bytes;
+            } else {
+                msgsReceived--;
+                bytesReceived -= e.bytes;
+            }
+            events.pop_front();
+        }
+    }
 };
 
 enum RelayState
@@ -124,11 +158,10 @@ private:
     // Statistics helpers
     void publishStatistics();
     void updateStats(size_t bytes, bool sent);
-    void resetWindow(StatsWindow &w, unsigned long now, unsigned long period);
 
-    StatsWindow minuteStats;
-    StatsWindow hourStats;
-    StatsWindow dayStats;
+    StatsWindow minuteStats{60000UL};
+    StatsWindow hourStats{3600000UL};
+    StatsWindow dayStats{86400000UL};
     unsigned long bootTime = 0;
     unsigned long receiverUptimeSec = 0;
     unsigned long lastStatsPublish = 0;
