@@ -204,7 +204,7 @@ void Receiver::sendStatus()
     {
         wifi = WIFI_ERROR;
     }
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%.1f:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi);
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%.1f:%d:%d:%lu", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, b, state, wifi, millis() / 1000UL);
     Serial.printf("Sending status \"%s\", length %d\r\n", txpacket, strlen(txpacket));
     lora_idle = false;
     Radio.Send((uint8_t *)txpacket, strlen(txpacket));

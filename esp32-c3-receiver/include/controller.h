@@ -11,6 +11,14 @@
 
 struct DailyStats;
 
+struct StatsWindow {
+    unsigned long start = 0;
+    unsigned long msgsSent = 0;
+    unsigned long msgsReceived = 0;
+    unsigned long bytesSent = 0;
+    unsigned long bytesReceived = 0;
+};
+
 enum RelayState
 {
     UNKNOWN,
@@ -67,7 +75,7 @@ private:
 
     void publishControllerStatus();
     void publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, float battery,
-                               int chargeState, int wifi);
+                               int chargeState, int wifi, unsigned long uptime);
     void publishReceiverDailyStats(const struct DailyStats &stats);
 
     void setSendStatusFrequency(unsigned int freq);
@@ -106,6 +114,18 @@ private:
     // Tracks the retained pump_station/switch/state value at startup
     bool initialStateReceived = false;
     bool retainedStateOn = false;
+
+    // Statistics helpers
+    void publishStatistics();
+    void updateStats(size_t bytes, bool sent);
+    void resetWindow(StatsWindow &w, unsigned long now, unsigned long period);
+
+    StatsWindow minuteStats;
+    StatsWindow hourStats;
+    StatsWindow dayStats;
+    unsigned long bootTime = 0;
+    unsigned long receiverUptimeSec = 0;
+    unsigned long lastStatsPublish = 0;
 
     void publishState();
     void sendDiscovery();

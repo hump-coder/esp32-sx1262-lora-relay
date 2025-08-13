@@ -423,7 +423,7 @@ void Receiver::sendHello()
 void Receiver::sendStatus()
 {
     updateStatusCache();
-    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%.1f:%d:%d", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, lastBatteryPct, static_cast<int>(lastChargeState), lastWifiState);
+    sprintf(txpacket, "S:%d:%d:%d:%d:%d:%.1f:%d:%d:%lu", txPower, mLastRssi, mLastSnr, mRelayState ? 1 : 0, mPulseMode ? 1 : 0, lastBatteryPct, static_cast<int>(lastChargeState), lastWifiState, millis() / 1000UL);
 
     pendingDailyStats = true;
     send(txpacket, strlen(txpacket));
