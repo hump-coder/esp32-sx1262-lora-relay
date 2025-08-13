@@ -62,8 +62,6 @@
 // Analog pin used to measure battery voltage
 #define BATTERY_VOLTAGE_PIN 2
 
-// Digital pin indicating charge status (HIGH when charging)
-#define CHARGE_STATUS_PIN 34
 
 enum WifiStatus {
     WIFI_DISABLED,
