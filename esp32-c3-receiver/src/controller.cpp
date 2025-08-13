@@ -123,8 +123,8 @@ void Controller::publishControllerStatus() {
 }
 
 void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay, bool pulse, float batteryPct,
-                                       int chargeState, int wifi) {
-    char payload[200];
+                                       int chargeState, int wifi, unsigned long uptime) {
+    char payload[256];
     const char *charge;
     switch (chargeState) {
         case 0: charge = "CHARGING"; break;
@@ -140,11 +140,11 @@ void Controller::publishReceiverStatus(int power, int rssi, int snr, bool relay,
         default: wifiState = "UNKNOWN"; break;
     }
     snprintf(payload, sizeof(payload),
-             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%.1f,\"charge\":\"%s\",\"wifi\":\"%s\"}",
+             "{\"power\":%d,\"rssi\":%d,\"snr\":%d,\"state\":\"%s\",\"mode\":\"%s\",\"battery\":%.1f,\"charge\":\"%s\",\"wifi\":\"%s\",\"uptime\":%lu}",
              power, rssi, snr,
              relay ? "ON" : "OFF",
              pulse ? "pulse" : "normal", batteryPct,
-             charge, wifiState);
+             charge, wifiState, uptime);
     mqttClient.publish("pump_station/status/receiver", payload, true);
 }
 
@@ -154,6 +154,49 @@ void Controller::publishReceiverDailyStats(const DailyStats &stats) {
              "{\"minV\":%.2f,\"maxV\":%.2f,\"avgV\":%.2f,\"minSOC\":%.1f,\"maxSOC\":%.1f,\"avgSOC\":%.1f}",
              stats.minV, stats.maxV, stats.avgV, stats.minSOC, stats.maxSOC, stats.avgSOC);
     mqttClient.publish("pump_station/status/receiver/battery_daily", payload, true);
+}
+
+void Controller::resetWindow(StatsWindow &w, unsigned long now, unsigned long period) {
+    if (w.start == 0 || now - w.start >= period) {
+        w.start = now;
+        w.msgsSent = w.msgsReceived = w.bytesSent = w.bytesReceived = 0;
+    }
+}
+
+void Controller::updateStats(size_t bytes, bool sent) {
+    unsigned long now = millis();
+    resetWindow(minuteStats, now, 60000UL);
+    resetWindow(hourStats, now, 3600000UL);
+    resetWindow(dayStats, now, 86400000UL);
+    StatsWindow *windows[3] = {&minuteStats, &hourStats, &dayStats};
+    for (auto w : windows) {
+        if (sent) {
+            w->msgsSent++;
+            w->bytesSent += bytes;
+        } else {
+            w->msgsReceived++;
+            w->bytesReceived += bytes;
+        }
+    }
+}
+
+void Controller::publishStatistics() {
+    unsigned long now = millis();
+    resetWindow(minuteStats, now, 60000UL);
+    resetWindow(hourStats, now, 3600000UL);
+    resetWindow(dayStats, now, 86400000UL);
+    unsigned long uptime = (now - bootTime) / 1000UL;
+    char payload[256];
+    snprintf(payload, sizeof(payload),
+             "{\"uptime\":%lu,\"receiver_uptime\":%lu,\"msg_sent_min\":%lu,\"msg_recv_min\":%lu,\"bytes_sent_min\":%lu,\"bytes_recv_min\":%lu,\"msg_sent_hr\":%lu,\"msg_recv_hr\":%lu,\"bytes_sent_hr\":%lu,\"bytes_recv_hr\":%lu,\"msg_sent_day\":%lu,\"msg_recv_day\":%lu,\"bytes_sent_day\":%lu,\"bytes_recv_day\":%lu}",
+             uptime, receiverUptimeSec,
+             minuteStats.msgsSent, minuteStats.msgsReceived,
+             minuteStats.bytesSent, minuteStats.bytesReceived,
+             hourStats.msgsSent, hourStats.msgsReceived,
+             hourStats.bytesSent, hourStats.bytesReceived,
+             dayStats.msgsSent, dayStats.msgsReceived,
+             dayStats.bytesSent, dayStats.bytesReceived);
+    mqttClient.publish("pump_station/status/stats", payload, true);
 }
 
 void controllerMqttCallback(char *topic, byte *payload, unsigned int length) {
@@ -252,6 +295,8 @@ void Controller::ensureMqtt() {
 
 void Controller::setup() {
     Settings::begin();
+    bootTime = millis();
+    minuteStats.start = hourStats.start = dayStats.start = bootTime;
     txPower = Settings::getInt(KEY_CTRL_TX_POWER, TX_OUTPUT_POWER);
     receiverTxPower = Settings::getInt(KEY_RX_TX_POWER, TX_OUTPUT_POWER);
     statusSendFreqSec = Settings::getInt(KEY_CTRL_STATUS_FREQ, DEFAULT_STATUS_SEND_FREQ_SEC);
@@ -351,6 +396,7 @@ void Controller::sendMessage(const char *msg) {
     lora_idle = false;
     Serial.printf("Sending \"%s\"\n", msg);
     transmissionState = radio.startTransmit((uint8_t*)msg, strlen(msg));
+    updateStats(strlen(msg), true);
 }
 
 void Controller::setTxPower(int power) {
@@ -401,6 +447,10 @@ void Controller::loop() {
     if(millis() - lastStatusPublish > statusSendFreqSec * 1000UL) {
         publishControllerStatus();
         lastStatusPublish = millis();
+    }
+    if(millis() - lastStatsPublish > 60000UL) {
+        publishStatistics();
+        lastStatsPublish = millis();
     }
     mqttClient.loop();
     processQueue();
@@ -486,13 +536,19 @@ void Controller::processReceived(char *rxpacket) {
                 float batt = atof(strings[6]);
                 int cstate = -1;
                 int wifi = WIFI_DISABLED;
-                if(index >= 9) {
+                unsigned long uptime = 0;
+                if(index >= 10) {
                     cstate = atoi(strings[7]);
                     wifi = atoi(strings[8]);
+                    uptime = strtoul(strings[9], NULL, 10);
+                } else if(index >= 9) {
+                    wifi = atoi(strings[7]);
+                    uptime = strtoul(strings[8], NULL, 10);
                 } else if(index >= 8) {
                     wifi = atoi(strings[7]);
                 }
-                publishReceiverStatus(power, rssi, snr, state, pulse, batt, cstate, wifi);
+                receiverUptimeSec = uptime;
+                publishReceiverStatus(power, rssi, snr, state, pulse, batt, cstate, wifi, uptime);
             }
         } else if(strlen(strings[0]) == 1 && strings[0][0] == 'D') {
             if(index >= 2) {
@@ -517,6 +573,7 @@ void Controller::OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t 
     mLastSnr = snr;
     Serial.printf("\r\nreceived packet \"%s\" with Rssi %d , length %d\r\n", rxpacket, rssi, size);
     setIdle();
+    updateStats(size, false);
     processReceived(rxpacket);
 }
 
