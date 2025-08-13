@@ -254,6 +254,7 @@ void Receiver::setup()
     radio.setOutputPower(TX_OUTPUT_POWER);
     radio.setPreambleLength(LORA_PREAMBLE_LENGTH);
     radio.invertIQ(LORA_IQ_INVERSION_ON);
+    radio.setSyncWord(LORA_SYNC_WORD);
     if (LORA_FIX_LENGTH_PAYLOAD_ON)
     {
         radio.implicitHeader(LORA_SYMBOL_TIMEOUT);

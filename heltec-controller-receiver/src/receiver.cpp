@@ -152,6 +152,8 @@ void Receiver::setup()
                       LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
                       0, true, 0, 0, LORA_IQ_INVERSION_ON, true);
 
+    Radio.SetSyncWord(LORA_SYNC_WORD);
+
     setIdle();
 
     Serial.println("Init Radio - complete");

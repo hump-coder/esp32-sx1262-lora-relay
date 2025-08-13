@@ -418,6 +418,8 @@ void Controller::setup() {
                                    LORA_SYMBOL_TIMEOUT, LORA_FIX_LENGTH_PAYLOAD_ON,
                                    0, true, 0, 0, LORA_IQ_INVERSION_ON, true );
 
+    Radio.SetSyncWord(LORA_SYNC_WORD);
+
     // Begin in continuous receive mode so incoming packets are processed
     Radio.Rx( 0 );
 
