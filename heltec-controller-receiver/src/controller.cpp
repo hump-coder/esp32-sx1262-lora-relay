@@ -260,6 +260,9 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
     } else if(strcmp(topic, "pump_station/wifi/disable") == 0) {
         ++mStateId;
         sendMessage("WIFI:OFF");
+    } else if(strcmp(topic, "pump_station/reboot") == 0) {
+        ++mStateId;
+        sendMessage("REBOOT");
     } else if(strcmp(topic, "pump_station/switch/state") == 0) {
         initialStateReceived = true;
         retainedStateOn = cmd.startsWith("ON");
@@ -355,6 +358,7 @@ void Controller::ensureMqtt() {
     mqttClient.subscribe("pump_station/wifi/connect");
     mqttClient.subscribe("pump_station/wifi/connect_custom");
     mqttClient.subscribe("pump_station/wifi/disable");
+    mqttClient.subscribe("pump_station/reboot");
     mqttClient.subscribe("pump_station/switch/state");
 
     // Process any retained messages (such as the last set command or state)
@@ -703,6 +707,10 @@ void Controller::processReceived(char *rxpacket)
             else if(strcasecmp(strings[2], "status") == 0)
             {
                 Serial.println("Status command acknowledged");
+            }
+            else if(strcasecmp(strings[2], "reboot") == 0)
+            {
+                Serial.println("Receiver rebooting");
             }
             else if(strcasecmp(strings[2], "wifi") == 0)
             {

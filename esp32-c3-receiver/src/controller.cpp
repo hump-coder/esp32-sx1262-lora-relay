@@ -199,6 +199,9 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
         ++mStateId;
         sprintf(msg, "FREQ:%u", freq);
         enqueueMessage(msg);
+    } else if(strcmp(topic, "pump_station/reboot") == 0) {
+        ++mStateId;
+        enqueueMessage("REBOOT");
     }
 }
 
@@ -238,6 +241,7 @@ void Controller::ensureMqtt() {
                 mqttClient.subscribe("pump_station/tx_power/receiver/set");
                 mqttClient.subscribe("pump_station/status_freq/controller/set");
                 mqttClient.subscribe("pump_station/status_freq/receiver/set");
+                mqttClient.subscribe("pump_station/reboot");
                 sendDiscovery();
                 publishState();
                 publishControllerStatus();
@@ -456,6 +460,8 @@ void Controller::processReceived(char *rxpacket) {
                 unsigned int freq = atoi(strings[3]);
                 receiverStatusFreqSec = freq;
             } else if(strcasecmp(strings[2], "status") == 0) {
+                // no-op
+            } else if(strcasecmp(strings[2], "reboot") == 0) {
                 // no-op
             } else if(strcasecmp(strings[2], "wifi") == 0) {
                 // no-op

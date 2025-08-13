@@ -616,7 +616,13 @@ void Receiver::processReceived(char *rxpacket)
         uint16_t stateId = atoi(strings[1]);
         const char *resp = NULL;
 
-        if(strcasecmp(strings[2], "sync") == 0) {
+        if(strcasecmp(strings[2], "reboot") == 0) {
+            delay(200);
+            sendAck(stateId, "reboot");
+            delay(100);
+            ESP.restart();
+            return;
+        } else if(strcasecmp(strings[2], "sync") == 0) {
             resp = "sync";
         } else if(strcasecmp(strings[2], "status") == 0) {
             sendStatus();
