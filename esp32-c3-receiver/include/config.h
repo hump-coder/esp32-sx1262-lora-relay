@@ -44,7 +44,7 @@
 #define DEFAULT_ON_TIME_SEC                         300
 
 // Default frequency in seconds to send a status update
-#define DEFAULT_STATUS_SEND_FREQ_SEC                300
+#define DEFAULT_STATUS_SEND_FREQ_SEC                60
 
 // Minimum percent change in battery level before sending an immediate status
 // update. Smaller fluctuations are ignored to reduce chatter.
