@@ -320,8 +320,8 @@ void Controller::setup() {
 
     ensureMqtt();
     lastStatusPublish = millis();
-    sendMessage("SYNC");
-    sendMessage("STATUS");
+    enqueueMessage("SYNC");
+    enqueueMessage("STATUS");
 }
 
 void Controller::setIdle() {
@@ -357,7 +357,10 @@ void Controller::sendCurrentMessage() {
     if (outbox.empty()) return;
     OutgoingMessage &om = outbox.front();
     char buffer[BUFFER_SIZE];
-    snprintf(buffer, sizeof(buffer), "%s:%u:%s", om.type.c_str(), om.id, om.payload.c_str());
+    int len = snprintf(buffer, sizeof(buffer), "C:%u:%s", om.id, om.type.c_str());
+    if (om.payload.length() > 0) {
+        snprintf(buffer + len, sizeof(buffer) - len, ":%s", om.payload.c_str());
+    }
     sendMessage(buffer);
     awaitingAck = true;
     om.attempts++;
@@ -513,7 +516,7 @@ void Controller::processReceived(char *rxpacket) {
                     char msg[16];
                     ++mStateId;
                     sprintf(msg, "PWR:%d", receiverTxPower);
-                    sendMessage(msg);
+                    enqueueMessage(msg);
                 }
             }
         } else if(strlen(strings[0]) == 1 && strings[0][0] == 'S') {
