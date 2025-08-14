@@ -199,13 +199,20 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
     }
     if(strcmp(topic, "pump_station/switch/set") == 0) {
         initialSetReceived = true;
-        if(cmd == "ON") {
-            setRelayState(true, DEFAULT_ON_TIME_SEC, false);
-        } else if(cmd == "OFF") {
+        if(cmd.startsWith("ON")) {
+            int idx = cmd.indexOf(":");
+            unsigned int dur = DEFAULT_ON_TIME_SEC;
+            if(idx > 0) {
+                dur = cmd.substring(idx + 1).toInt();
+                if(dur == 0) dur = DEFAULT_ON_TIME_SEC;
+            }
+            setRelayState(true, dur, false);
+        } else if(cmd.startsWith("OFF")) {
             setRelayState(false);
         }
     } else if(strcmp(topic, "pump_station/switch/pulse") == 0) {
         unsigned int dur = cmd.toInt();
+        if(dur == 0) dur = DEFAULT_ON_TIME_SEC;
         pulseRelay(dur);
     } else if(strcmp(topic, "pump_station/tx_power/controller/set") == 0) {
         int power = cmd.toInt();
@@ -213,6 +220,7 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
         Settings::setInt(KEY_CTRL_TX_POWER, power);
     } else if(strcmp(topic, "pump_station/tx_power/receiver/set") == 0) {
         int power = cmd.toInt();
+        if(power < MIN_TX_OUTPUT_POWER) power = MIN_TX_OUTPUT_POWER;
         receiverTxPower = power;
         Settings::setInt(KEY_RX_TX_POWER, power);
         char msg[16];
@@ -221,16 +229,34 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
         enqueueMessage(msg);
     } else if(strcmp(topic, "pump_station/status_freq/controller/set") == 0) {
         unsigned int freq = cmd.toInt();
+        if(freq == 0) freq = DEFAULT_CONTROLLER_STATUS_SEND_FREQ_SEC;
         setSendStatusFrequency(freq);
         Settings::setInt(KEY_CTRL_STATUS_FREQ, freq);
     } else if(strcmp(topic, "pump_station/status_freq/receiver/set") == 0) {
         unsigned int freq = cmd.toInt();
+        if(freq == 0) freq = DEFAULT_RECEIVER_STATUS_SEND_FREQ_SEC;
         receiverStatusFreqSec = freq;
         Settings::setInt(KEY_RX_STATUS_FREQ, freq);
         char msg[16];
         ++mStateId;
         sprintf(msg, "FREQ:%u", freq);
         enqueueMessage(msg);
+    } else if(strcmp(topic, "pump_station/wifi/connect") == 0) {
+        ++mStateId;
+        enqueueMessage("WIFI");
+    } else if(strcmp(topic, "pump_station/wifi/connect_custom") == 0) {
+        int idx = cmd.indexOf(':');
+        if(idx > 0) {
+            String ssid = cmd.substring(0, idx);
+            String pass = cmd.substring(idx + 1);
+            char msg[BUFFER_SIZE];
+            snprintf(msg, sizeof(msg), "WIFI:%s:%s", ssid.c_str(), pass.c_str());
+            ++mStateId;
+            enqueueMessage(msg);
+        }
+    } else if(strcmp(topic, "pump_station/wifi/disable") == 0) {
+        ++mStateId;
+        enqueueMessage("WIFI:OFF");
     } else if(strcmp(topic, "pump_station/reboot") == 0) {
         ++mStateId;
         enqueueMessage("REBOOT");
@@ -241,22 +267,37 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
 }
 
 void Controller::sendDiscovery() {
-    const char *switchPayload = "{\"name\":\"Pump\",\"command_topic\":\"pump_station/switch/set\",\"state_topic\":\"pump_station/switch/state\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\",\"unique_id\":\"pump_station\"}";
-    mqttClient.publish("homeassistant/switch/pump_station/config", switchPayload, true);
-    const char *pulsePayload = "{\"name\":\"Pump Pulse\",\"command_topic\":\"pump_station/switch/pulse\",\"min\":1,\"max\":3600,\"step\":1,\"unit_of_measurement\":\"s\",\"unique_id\":\"pump_station_pulse\"}";
-    mqttClient.publish("homeassistant/number/pump_station_pulse/config", pulsePayload, true);
-    const char *ctrlPowerPayload = "{\"name\":\"Controller Tx Power\",\"command_topic\":\"pump_station/tx_power/controller/set\",\"min\":0,\"max\":22,\"step\":1,\"unit_of_measurement\":\"dBm\",\"unique_id\":\"pump_station_ctrl_power\"}";
-    mqttClient.publish("homeassistant/number/pump_station_ctrl_power/config", ctrlPowerPayload, true);
-    const char *rxPowerPayload = "{\"name\":\"Receiver Tx Power\",\"command_topic\":\"pump_station/tx_power/receiver/set\",\"min\":0,\"max\":22,\"step\":1,\"unit_of_measurement\":\"dBm\",\"unique_id\":\"pump_station_rx_power\"}";
-    mqttClient.publish("homeassistant/number/pump_station_rx_power/config", rxPowerPayload, true);
-    const char *ctrlStatusPayload = "{\"name\":\"Controller Status\",\"state_topic\":\"pump_station/status/controller\",\"value_template\":\"{{ value_json.state }}\",\"json_attributes_topic\":\"pump_station/status/controller\",\"unique_id\":\"pump_station_ctrl_status\"}";
-    mqttClient.publish("homeassistant/sensor/pump_station_ctrl_status/config", ctrlStatusPayload, true);
-    const char *rxStatusPayload = "{\"name\":\"Receiver Status\",\"state_topic\":\"pump_station/status/receiver\",\"value_template\":\"{{ value_json.state }}\",\"json_attributes_topic\":\"pump_station/status/receiver\",\"unique_id\":\"pump_station_rx_status\"}";
-    mqttClient.publish("homeassistant/sensor/pump_station_rx_status/config", rxStatusPayload, true);
-    const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_batt_daily\"}";
-    mqttClient.publish("homeassistant/sensor/pump_station_batt_daily/config", rxBattDailyPayload, true);
-    const char *statsPayload = "{\"name\":\"Pump Stats\",\"state_topic\":\"pump_station/status/stats\",\"value_template\":\"{{ value_json.uptime }}\",\"unit_of_measurement\":\"s\",\"json_attributes_topic\":\"pump_station/status/stats\",\"unique_id\":\"pump_station_stats\"}";
-    mqttClient.publish("homeassistant/sensor/pump_station_stats/config", statsPayload, true);
+    const char *switchTopic = "homeassistant/switch/pump_station/config";
+    const char *switchPayload = "{\"name\":\"Pump\",\"command_topic\":\"pump_station/switch/set\",\"state_topic\":\"pump_station/switch/state\",\"payload_on\":\"ON\",\"payload_off\":\"OFF\",\"unique_id\":\"pump_station\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(switchTopic, switchPayload, true);
+
+    const char *pulseTopic = "homeassistant/number/pump_station_pulse/config";
+    const char *pulsePayload = "{\"name\":\"Pump Pulse\",\"command_topic\":\"pump_station/switch/pulse\",\"min\":1,\"max\":3600,\"step\":1,\"unit_of_measurement\":\"s\",\"unique_id\":\"pump_station_pulse\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(pulseTopic, pulsePayload, true);
+
+    const char *ctrlPowerTopic = "homeassistant/number/pump_station_ctrl_power/config";
+    const char *ctrlPowerPayload = "{\"name\":\"Controller Tx Power\",\"command_topic\":\"pump_station/tx_power/controller/set\",\"min\":0,\"max\":22,\"step\":1,\"unit_of_measurement\":\"dBm\",\"unique_id\":\"pump_station_ctrl_power\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(ctrlPowerTopic, ctrlPowerPayload, true);
+
+    const char *rxPowerTopic = "homeassistant/number/pump_station_rx_power/config";
+    const char *rxPowerPayload = "{\"name\":\"Receiver Tx Power\",\"command_topic\":\"pump_station/tx_power/receiver/set\",\"min\":0,\"max\":22,\"step\":1,\"unit_of_measurement\":\"dBm\",\"unique_id\":\"pump_station_rx_power\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(rxPowerTopic, rxPowerPayload, true);
+
+    const char *ctrlStatusTopic = "homeassistant/sensor/pump_station_ctrl_status/config";
+    const char *ctrlStatusPayload = "{\"name\":\"Controller Status\",\"state_topic\":\"pump_station/status/controller\",\"value_template\":\"{{ value_json.state }}\",\"json_attributes_topic\":\"pump_station/status/controller\",\"unique_id\":\"pump_station_ctrl_status\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(ctrlStatusTopic, ctrlStatusPayload, true);
+
+    const char *rxStatusTopic = "homeassistant/sensor/pump_station_rx_status/config";
+    const char *rxStatusPayload = "{\"name\":\"Receiver Status\",\"state_topic\":\"pump_station/status/receiver\",\"value_template\":\"{{ value_json.state }}\",\"json_attributes_topic\":\"pump_station/status/receiver\",\"unique_id\":\"pump_station_rx_status\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(rxStatusTopic, rxStatusPayload, true);
+
+    const char *rxBattDailyTopic = "homeassistant/sensor/pump_station_batt_daily/config";
+    const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_batt_daily\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(rxBattDailyTopic, rxBattDailyPayload, true);
+
+    const char *statsTopic = "homeassistant/sensor/pump_station_stats/config";
+    const char *statsPayload = "{\"name\":\"Pump Stats\",\"state_topic\":\"pump_station/status/stats\",\"value_template\":\"{{ value_json.uptime }}\",\"unit_of_measurement\":\"s\",\"json_attributes_topic\":\"pump_station/status/stats\",\"unique_id\":\"pump_station_stats\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(statsTopic, statsPayload, true);
 }
 
 void Controller::ensureMqtt() {
@@ -278,6 +319,9 @@ void Controller::ensureMqtt() {
                 mqttClient.subscribe("pump_station/tx_power/receiver/set");
                 mqttClient.subscribe("pump_station/status_freq/controller/set");
                 mqttClient.subscribe("pump_station/status_freq/receiver/set");
+                mqttClient.subscribe("pump_station/wifi/connect");
+                mqttClient.subscribe("pump_station/wifi/connect_custom");
+                mqttClient.subscribe("pump_station/wifi/disable");
                 mqttClient.subscribe("pump_station/reboot");
                 mqttClient.subscribe("pump_station/switch/state");
 
