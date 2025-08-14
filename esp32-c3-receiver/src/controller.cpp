@@ -234,6 +234,9 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
     } else if(strcmp(topic, "pump_station/reboot") == 0) {
         ++mStateId;
         enqueueMessage("REBOOT");
+    } else if(strcmp(topic, "pump_station/switch/state") == 0) {
+        initialStateReceived = true;
+        retainedStateOn = cmd.startsWith("ON");
     }
 }
 
@@ -276,6 +279,23 @@ void Controller::ensureMqtt() {
                 mqttClient.subscribe("pump_station/status_freq/controller/set");
                 mqttClient.subscribe("pump_station/status_freq/receiver/set");
                 mqttClient.subscribe("pump_station/reboot");
+                mqttClient.subscribe("pump_station/switch/state");
+
+                // Process retained messages for last command or state
+                initialSetReceived = false;
+                initialStateReceived = false;
+                retainedStateOn = false;
+                unsigned long start = millis();
+                while (millis() - start < 2000 && !initialSetReceived && !initialStateReceived) {
+                    mqttClient.loop();
+                    delay(10);
+                }
+                mqttClient.unsubscribe("pump_station/switch/state");
+
+                if(!initialSetReceived && initialStateReceived && retainedStateOn) {
+                    setRelayState(true);
+                }
+
                 sendDiscovery();
                 publishState();
                 publishControllerStatus();
