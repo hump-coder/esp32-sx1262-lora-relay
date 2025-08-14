@@ -309,8 +309,8 @@ void Controller::setup() {
     bootTime = millis();
     txPower = Settings::getInt(KEY_CTRL_TX_POWER, TX_OUTPUT_POWER);
     receiverTxPower = Settings::getInt(KEY_RX_TX_POWER, TX_OUTPUT_POWER);
-    statusSendFreqSec = Settings::getInt(KEY_CTRL_STATUS_FREQ, DEFAULT_STATUS_SEND_FREQ_SEC);
-    receiverStatusFreqSec = Settings::getInt(KEY_RX_STATUS_FREQ, DEFAULT_STATUS_SEND_FREQ_SEC);
+    statusSendFreqSec = Settings::getInt(KEY_CTRL_STATUS_FREQ, DEFAULT_CONTROLLER_STATUS_SEND_FREQ_SEC);
+    receiverStatusFreqSec = Settings::getInt(KEY_RX_STATUS_FREQ, DEFAULT_RECEIVER_STATUS_SEND_FREQ_SEC);
 
     Serial.begin(115200);
     battery.begin();

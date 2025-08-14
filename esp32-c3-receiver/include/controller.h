@@ -116,8 +116,8 @@ private:
     unsigned int getSendStatusFrequency() const { return statusSendFreqSec; }
 
     unsigned int onTimeSec = DEFAULT_ON_TIME_SEC;
-    unsigned int statusSendFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
-    unsigned int receiverStatusFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
+    unsigned int statusSendFreqSec = DEFAULT_CONTROLLER_STATUS_SEND_FREQ_SEC;
+    unsigned int receiverStatusFreqSec = DEFAULT_RECEIVER_STATUS_SEND_FREQ_SEC;
     unsigned long autoOffTime = 0;
     unsigned long lastStatusPublish = 0;
     bool pulseMode = false;

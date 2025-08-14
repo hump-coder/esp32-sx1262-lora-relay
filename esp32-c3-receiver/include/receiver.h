@@ -45,7 +45,7 @@ class Receiver : public Device
     // controller in the ON message.
     unsigned int onTimeSec = 0;
     int txPower = TX_OUTPUT_POWER;
-    unsigned int statusSendFreqSec = DEFAULT_STATUS_SEND_FREQ_SEC;
+    unsigned int statusSendFreqSec = DEFAULT_RECEIVER_STATUS_SEND_FREQ_SEC;
     unsigned long lastStatusSend = 0;
     bool pendingDailyStats = false;
     bool mIsTransmitting = false;

@@ -6,7 +6,7 @@
 #include "BatteryMonitor.h"
 
 
-bool isController = false;
+bool isController = true;
 bool enableWifi = isController;
 
 Device *device = 0;
@@ -37,7 +37,6 @@ void setup() {
 
 
 void loop() {
-    
     device->loop();
     battery.update();
 }
