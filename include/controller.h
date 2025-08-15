@@ -147,6 +147,13 @@ private:
     // Timestamp of the last packet received from the receiver
     unsigned long lastContactTime = 0;
 
+    // Ping tracking
+    unsigned long lastPingSent = 0;
+    unsigned long pingSentTime = 0;
+    uint16_t pingId = 0;
+    uint8_t pingFailures = 0;
+    bool pingWaiting = false;
+
     // Next time to refresh the ON command before receiver timeout
     unsigned long nextRelayRefresh = 0;
 
@@ -190,6 +197,7 @@ private:
     void publishState();
     void sendDiscovery();
     void setIdle();
+    void sendPing();
 };
 
 #endif // PUMP_CONTROLLER_H

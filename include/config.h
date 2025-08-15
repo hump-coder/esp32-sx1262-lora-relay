@@ -3,12 +3,11 @@
 
 #include "config-private.h"
 
-
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-// The pins for I2C are defined by the Wire-library. 
+// The pins for I2C are defined by the Wire-library.
 // On an arduino UNO:       A4(SDA), A5(SCL)
 // On an arduino MEGA 2560: 20(SDA), 21(SCL)
 // On an arduino LEONARDO:   2(SDA),  3(SCL), ...
@@ -35,7 +34,6 @@
 #define LORA_FIX_LENGTH_PAYLOAD_ON                  false
 #define LORA_IQ_INVERSION_ON                        false
 
-
 #define RX_TIMEOUT_VALUE                            1000
 #define BUFFER_SIZE                                 128 // Define the payload size here
 
@@ -43,7 +41,7 @@
 // no further ON commands are received.
 #define DEFAULT_ON_TIME_SEC                         300
 
-// Default frequency in seconds to send receiver a status updates
+// Default frequency in seconds to send receiver status updates
 #define DEFAULT_RECEIVER_STATUS_SEND_FREQ_SEC       300
 
 // Default frequency in seconds to send controller status updates
@@ -57,6 +55,15 @@
 // before marking the relay state as unknown.
 #define COMMUNICATION_TIMEOUT_MS                    60000
 
+// Seconds between ping requests to the receiver
+#define PING_INTERVAL_SEC                           60
+
+// Milliseconds to wait for a ping response before considering it failed
+#define PING_RESPONSE_TIMEOUT_MS                    1000
+
+// Number of consecutive failed pings before marking the receiver disconnected
+#define PING_FAILURE_THRESHOLD                      3
+
 // Interval in milliseconds between OFF command retries
 #define OFF_RETRY_INTERVAL_MS                       5000
 
@@ -66,7 +73,6 @@
 // Analog pin used to measure battery voltage
 #define BATTERY_VOLTAGE_PIN 2
 
-
 enum WifiStatus {
     WIFI_DISABLED,
     WIFI_CONNECTED,
@@ -74,6 +80,5 @@ enum WifiStatus {
     WIFI_ERROR
 };
 
-
-
 #endif // DEVICE_CONFIG_H
+

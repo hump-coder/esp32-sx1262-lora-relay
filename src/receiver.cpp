@@ -645,6 +645,8 @@ void Receiver::processReceived(char *rxpacket)
                 connectWifi(ssid, pass);
             }
             resp = "wifi";
+        } else if(strcasecmp(strings[2], "ping") == 0) {
+            resp = "ping";
         } else {
             bool newRelayState = false;
             if(strcasecmp(strings[2], "on") == 0 || strcasecmp(strings[2], "pulse") == 0) {
