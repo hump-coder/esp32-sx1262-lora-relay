@@ -625,8 +625,9 @@ void Receiver::processReceived(char *rxpacket)
         } else if(strcasecmp(strings[2], "sync") == 0) {
             resp = "sync";
         } else if(strcasecmp(strings[2], "status") == 0) {
-            sendStatus();
-            resp = "status";
+            sendAck(stateId, "status");
+            pendingStatus = true;
+            return;
         } else if(strcasecmp(strings[2], "freq") == 0 && index >= 4) {
             int freq = atoi(strings[3]);
             setSendStatusFrequency(freq);
@@ -697,7 +698,10 @@ void Receiver::OnTxDone(void)
 {
     // radio.sleep();
     Serial.println("TX done......");
-    if (pendingDailyStats) {
+    if (pendingStatus) {
+        pendingStatus = false;
+        sendStatus();
+    } else if (pendingDailyStats) {
         pendingDailyStats = false;
         sendDailyStats();
     } else {

@@ -48,6 +48,7 @@ class Receiver : public Device
     unsigned int statusSendFreqSec = DEFAULT_RECEIVER_STATUS_SEND_FREQ_SEC;
     unsigned long lastStatusSend = 0;
     bool pendingDailyStats = false;
+    bool pendingStatus = false;
     bool mIsTransmitting = false;
     float lastBatteryPct = -1;
     ChargeState lastChargeState = DISCHARGING;
