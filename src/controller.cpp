@@ -176,7 +176,7 @@ void Controller::publishStatistics() {
     unsigned long uptime = (now - bootTime) / 1000UL;
     char payload[512];
     snprintf(payload, sizeof(payload),
-             "{\"uptime\":%lu,\"receiver_uptime\":%lu,\"msg_sent_min\":%lu,\"msg_recv_min\":%lu,\"bytes_sent_min\":%lu,\"bytes_recv_min\":%lu,\"msg_sent_hr\":%lu,\"msg_recv_hr\":%lu,\"bytes_sent_hr\":%lu,\"bytes_recv_hr\":%lu,\"msg_sent_day\":%lu,\"msg_recv_day\":%lu,\"bytes_sent_day\":%lu,\"bytes_recv_day\":%lu,\"msg_sent_total\":%lu,\"msg_recv_total\":%lu}",
+             "{\"uptime\":%lu,\"receiver_uptime\":%lu,\"msg_sent_min\":%lu,\"msg_recv_min\":%lu,\"bytes_sent_min\":%lu,\"bytes_recv_min\":%lu,\"msg_sent_hr\":%lu,\"msg_recv_hr\":%lu,\"bytes_sent_hr\":%lu,\"bytes_recv_hr\":%lu,\"msg_sent_day\":%lu,\"msg_recv_day\":%lu,\"bytes_sent_day\":%lu,\"bytes_recv_day\":%lu,\"msg_sent_total\":%lu,\"msg_recv_total\":%lu,\"last_rtt_ms\":%lu,\"avg_rtt_ms\":%lu,\"min_rtt_ms\":%lu,\"max_rtt_ms\":%lu,\"rtt_count\":%lu}",
              uptime, receiverUptimeSec,
              minuteStats.msgsSent, minuteStats.msgsReceived,
              minuteStats.bytesSent, minuteStats.bytesReceived,
@@ -184,7 +184,8 @@ void Controller::publishStatistics() {
              hourStats.bytesSent, hourStats.bytesReceived,
              dayStats.msgsSent, dayStats.msgsReceived,
              dayStats.bytesSent, dayStats.bytesReceived,
-             totalMsgsSent, totalMsgsReceived);
+             totalMsgsSent, totalMsgsReceived,
+             rttStats.last, rttStats.avg(), rttStats.min, rttStats.max, rttStats.count);
     mqttClient.publish("pump_station/status/stats", payload, true);
 }
 
@@ -449,9 +450,10 @@ void Controller::sendCurrentMessage() {
         snprintf(buffer + len, sizeof(buffer) - len, ":%s", om.payload.c_str());
     }
     sendMessage(buffer);
+    om.sendTime = millis();
     awaitingAck = true;
     om.attempts++;
-    lastSendAttempt = millis();
+    lastSendAttempt = om.sendTime;
 }
 
 void Controller::processQueue() {
@@ -572,6 +574,8 @@ void Controller::processReceived(char *rxpacket) {
         if (strlen(strings[0]) == 1 && strings[0][0] == 'A') {
             uint16_t stateId = atoi(strings[1]);
             if (!outbox.empty() && outbox.front().id == stateId) {
+                unsigned long rtt = millis() - outbox.front().sendTime;
+                rttStats.add(rtt);
                 awaitingAck = false;
                 outbox.pop_front();
             }
