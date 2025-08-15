@@ -7,7 +7,7 @@ A LoRa-based pump control system built around a generic ESP32-C3 board paired wi
 
 ## Building
 
-1. Copy `include/config-example.h` to `include/config-private.h` and update it with your WiFi and MQTT settings.
+1. Copy `include/config-example.h` to `include/config-private.h` and update it with your WiFi, optional custom WiFi and MQTT settings.
 2. Edit `src/main.cpp` and set `isController` to `true` for the controller firmware or `false` for the receiver.
 3. Build the firmware with PlatformIO:
 
@@ -48,6 +48,6 @@ When the controller connects to MQTT it publishes discovery messages so Home Ass
 - `switch` – pump on/off control.
 - `number` – `Pump Pulse`, `Controller Tx Power` and `Receiver Tx Power`.
 - `sensor` – `Controller Status`, `Receiver Status`, `Receiver Battery Daily` and `Pump Stats`.
-- `button` – request receiver status updates on demand.
+- `button` – `Request Receiver Status`, `Receiver Connect Wifi`, `Receiver Connect Custom Wifi` and `Receiver Reboot`.
 
 Each discovery message references the MQTT topics listed above.

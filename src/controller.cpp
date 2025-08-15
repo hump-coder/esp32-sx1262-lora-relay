@@ -302,6 +302,18 @@ void Controller::sendDiscovery() {
     const char *statusReqPayload = "{\"name\":\"Request Receiver Status\",\"command_topic\":\"pump_station/status/request\",\"payload_press\":\"1\",\"unique_id\":\"pump_station_status_request\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
     mqttClient.publish(statusReqTopic, statusReqPayload, true);
 
+    const char *wifiConnTopic = "homeassistant/button/pump_station_wifi_connect/config";
+    const char *wifiConnPayload = "{\"name\":\"Receiver Connect Wifi\",\"command_topic\":\"pump_station/wifi/connect\",\"payload_press\":\"1\",\"unique_id\":\"pump_station_wifi_connect\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(wifiConnTopic, wifiConnPayload, true);
+
+    const char *wifiCustomTopic = "homeassistant/button/pump_station_wifi_connect_custom/config";
+    const char *wifiCustomPayload = "{\"name\":\"Receiver Connect Custom Wifi\",\"command_topic\":\"pump_station/wifi/connect_custom\",\"payload_press\":\"" WIFI_CUSTOM_SSID ":" WIFI_CUSTOM_PASS "\",\"unique_id\":\"pump_station_wifi_connect_custom\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(wifiCustomTopic, wifiCustomPayload, true);
+
+    const char *rebootTopic = "homeassistant/button/pump_station_reboot/config";
+    const char *rebootPayload = "{\"name\":\"Receiver Reboot\",\"command_topic\":\"pump_station/reboot\",\"payload_press\":\"1\",\"unique_id\":\"pump_station_reboot\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(rebootTopic, rebootPayload, true);
+
     const char *statsTopic = "homeassistant/sensor/pump_station_stats/config";
     const char *statsPayload = "{\"name\":\"Pump Stats\",\"state_topic\":\"pump_station/status/stats\",\"value_template\":\"{{ value_json.uptime }}\",\"unit_of_measurement\":\"s\",\"json_attributes_topic\":\"pump_station/status/stats\",\"unique_id\":\"pump_station_stats\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
     mqttClient.publish(statsTopic, statsPayload, true);
