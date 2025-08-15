@@ -326,10 +326,15 @@ void Controller::sendDiscovery() {
 void Controller::ensureMqtt() {
     if (!mqttClient.connected()) {
         if (WiFi.status() != WL_CONNECTED) {
+            WiFi.mode(WIFI_STA);
             WiFi.begin(WIFI_SSID, WIFI_PASS);
             unsigned long start = millis();
             while (WiFi.status() != WL_CONNECTED && millis() - start < 10000) {
                 delay(500);
+            }
+            if (WiFi.status() == WL_CONNECTED) {
+                ArduinoOTA.setHostname(DEVICE_NAME);
+                ArduinoOTA.begin();
             }
         }
         if (WiFi.status() == WL_CONNECTED) {
@@ -527,6 +532,7 @@ void Controller::pulseRelay(unsigned int onTime) {
 }
 
 void Controller::loop() {
+    ArduinoOTA.handle();
     if (lora_idle) {
         checkReceiveData();
     } else {
