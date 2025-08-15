@@ -307,7 +307,10 @@ void Controller::sendDiscovery() {
     mqttClient.publish(wifiConnTopic, wifiConnPayload, true);
 
     const char *wifiCustomTopic = "homeassistant/button/pump_station_wifi_connect_custom/config";
-    const char *wifiCustomPayload = "{\"name\":\"Receiver Connect Custom Wifi\",\"command_topic\":\"pump_station/wifi/connect_custom\",\"payload_press\":\"" WIFI_CUSTOM_SSID ":" WIFI_CUSTOM_PASS "\",\"unique_id\":\"pump_station_wifi_connect_custom\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    char wifiCustomPayload[256];
+    snprintf(wifiCustomPayload, sizeof(wifiCustomPayload),
+             "{\"name\":\"Receiver Connect Custom Wifi\",\"command_topic\":\"pump_station/wifi/connect_custom\",\"payload_press\":\"%s:%s\",\"unique_id\":\"pump_station_wifi_connect_custom\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}",
+             WIFI_CUSTOM_SSID, WIFI_CUSTOM_PASS);
     mqttClient.publish(wifiCustomTopic, wifiCustomPayload, true);
 
     const char *rebootTopic = "homeassistant/button/pump_station_reboot/config";
