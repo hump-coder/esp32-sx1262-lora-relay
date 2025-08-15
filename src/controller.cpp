@@ -260,6 +260,9 @@ void Controller::mqttCallback(char *topic, byte *payload, unsigned int length) {
     } else if(strcmp(topic, "pump_station/reboot") == 0) {
         ++mStateId;
         enqueueMessage("REBOOT");
+    } else if(strcmp(topic, "pump_station/status/request") == 0) {
+        ++mStateId;
+        enqueueMessage("STATUS");
     } else if(strcmp(topic, "pump_station/switch/state") == 0) {
         initialStateReceived = true;
         retainedStateOn = cmd.startsWith("ON");
@@ -295,6 +298,10 @@ void Controller::sendDiscovery() {
     const char *rxBattDailyPayload = "{\"name\":\"Receiver Battery Daily\",\"state_topic\":\"pump_station/status/receiver/battery_daily\",\"value_template\":\"{{ value_json.avgV }}\",\"json_attributes_topic\":\"pump_station/status/receiver/battery_daily\",\"unique_id\":\"pump_station_batt_daily\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
     mqttClient.publish(rxBattDailyTopic, rxBattDailyPayload, true);
 
+    const char *statusReqTopic = "homeassistant/button/pump_station_status_request/config";
+    const char *statusReqPayload = "{\"name\":\"Request Receiver Status\",\"command_topic\":\"pump_station/status/request\",\"payload_press\":\"1\",\"unique_id\":\"pump_station_status_request\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
+    mqttClient.publish(statusReqTopic, statusReqPayload, true);
+
     const char *statsTopic = "homeassistant/sensor/pump_station_stats/config";
     const char *statsPayload = "{\"name\":\"Pump Stats\",\"state_topic\":\"pump_station/status/stats\",\"value_template\":\"{{ value_json.uptime }}\",\"unit_of_measurement\":\"s\",\"json_attributes_topic\":\"pump_station/status/stats\",\"unique_id\":\"pump_station_stats\",\"device\":{\"identifiers\":[\"pump_station\"],\"name\":\"Pump Controller\",\"model\":\"ESP32-C3 SX1262\",\"manufacturer\":\"Espressif\"}}";
     mqttClient.publish(statsTopic, statsPayload, true);
@@ -323,6 +330,7 @@ void Controller::ensureMqtt() {
                 mqttClient.subscribe("pump_station/wifi/connect_custom");
                 mqttClient.subscribe("pump_station/wifi/disable");
                 mqttClient.subscribe("pump_station/reboot");
+                mqttClient.subscribe("pump_station/status/request");
                 mqttClient.subscribe("pump_station/switch/state");
 
                 // Process retained messages for last command or state

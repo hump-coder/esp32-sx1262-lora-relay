@@ -31,6 +31,7 @@ Flash the compiled firmware to your ESP32-C3 boards. One board should be built w
 - `pump_station/wifi/connect_custom` – payload `SSID:PASSWORD` to join a specific network for OTA.
 - `pump_station/wifi/disable` – disconnect the receiver from WiFi and disable OTA updates.
 - `pump_station/reboot` – instruct the receiver to reboot.
+- `pump_station/status/request` – ask the receiver to immediately send status and battery info.
 - `pump_station/switch/state` – retained state topic used by the controller to resume the last relay state.
 
 The controller publishes status updates to:
@@ -47,5 +48,6 @@ When the controller connects to MQTT it publishes discovery messages so Home Ass
 - `switch` – pump on/off control.
 - `number` – `Pump Pulse`, `Controller Tx Power` and `Receiver Tx Power`.
 - `sensor` – `Controller Status`, `Receiver Status`, `Receiver Battery Daily` and `Pump Stats`.
+- `button` – request receiver status updates on demand.
 
 Each discovery message references the MQTT topics listed above.
