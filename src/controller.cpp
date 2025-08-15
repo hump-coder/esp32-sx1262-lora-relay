@@ -481,6 +481,16 @@ void Controller::sendMessage(const char *msg) {
     updateStats(strlen(msg), true);
 }
 
+void Controller::sendPing() {
+    pingId = mStateId++;
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "C:%u:PING", pingId);
+    sendMessage(buffer);
+    pingSentTime = millis();
+    lastPingSent = pingSentTime;
+    pingWaiting = true;
+}
+
 void Controller::setTxPower(int power) {
     txPower = constrain(power, MIN_TX_OUTPUT_POWER, 22);
     radio.setOutputPower(txPower);
@@ -535,7 +545,9 @@ void Controller::loop() {
         lastStatsPublish = millis();
     }
     mqttClient.loop();
-    processQueue();
+    if(!pingWaiting) {
+        processQueue();
+    }
 
     if(autoOffTime && millis() > autoOffTime) {
         setRelayState(false);
@@ -555,6 +567,20 @@ void Controller::loop() {
         enqueueMessage(msg);
         nextRelayRefresh = millis() + ((unsigned long)onTimeSec * 1000UL / 2);
     }
+
+    unsigned long now = millis();
+    if(!pingWaiting && !awaitingAck && now - lastPingSent >= PING_INTERVAL_SEC * 1000UL) {
+        sendPing();
+    }
+    if(pingWaiting && now - pingSentTime > PING_RESPONSE_TIMEOUT_MS) {
+        pingWaiting = false;
+        pingFailures++;
+        if(pingFailures >= PING_FAILURE_THRESHOLD) {
+            relayState = RelayState::UNKNOWN;
+            publishState();
+            lastContactTime = 0;
+        }
+    }
 }
 
 void Controller::processReceived(char *rxpacket) {
@@ -573,6 +599,13 @@ void Controller::processReceived(char *rxpacket) {
     if (index >= 3) {
         if (strlen(strings[0]) == 1 && strings[0][0] == 'A') {
             uint16_t stateId = atoi(strings[1]);
+            if (stateId == pingId) {
+                unsigned long rtt = millis() - pingSentTime;
+                rttStats.add(rtt);
+                pingWaiting = false;
+                pingFailures = 0;
+                return;
+            }
             if (!outbox.empty() && outbox.front().id == stateId) {
                 unsigned long rtt = millis() - outbox.front().sendTime;
                 rttStats.add(rtt);
