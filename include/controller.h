@@ -53,6 +53,28 @@ struct StatsWindow {
     }
 };
 
+struct RttStats {
+    unsigned long last = 0;
+    unsigned long min = 0;
+    unsigned long max = 0;
+    unsigned long total = 0;
+    unsigned long count = 0;
+
+    void add(unsigned long rtt) {
+        last = rtt;
+        if (count == 0 || rtt < min) {
+            min = rtt;
+        }
+        if (rtt > max) {
+            max = rtt;
+        }
+        total += rtt;
+        count++;
+    }
+
+    unsigned long avg() const { return count ? total / count : 0; }
+};
+
 enum RelayState
 {
     UNKNOWN,
@@ -134,6 +156,7 @@ private:
         String payload;
         uint16_t id;
         uint8_t attempts;
+        unsigned long sendTime;
     };
     std::deque<OutgoingMessage> outbox;
     bool awaitingAck = false;
@@ -161,6 +184,8 @@ private:
     unsigned long bootTime = 0;
     unsigned long receiverUptimeSec = 0;
     unsigned long lastStatsPublish = 0;
+
+    RttStats rttStats;
 
     void publishState();
     void sendDiscovery();
