@@ -1,80 +1,51 @@
 # esp32-sx1262-lora-relay
 
-This repository contains 2 platformio projects:
+A LoRa-based pump control system built around a generic ESP32-C3 board paired with an SX1262 module. The firmware can operate in two roles controlled by the `isController` flag in `src/main.cpp`:
 
-- heltec-controller-receiver, targeting the Heltec LoRa v3 board.
-- esp32-c3-receiver, targeting generic ESP32 C3 with a SX1262 module.
-
-
-# heltec-controller-receiver
-
-A PlatformIO project for a LoRa based pump control system using Heltec WiFi LoRa 32 V3 boards. Two identical devices communicate over LoRa and can operate in one of two roles controlled by the `isController` flag in `heltec-controller-receiver/src/main.cpp`.
-
-- **Controller mode** (`isController = true`): connects to WiFi and MQTT, sends `ON`/`OFF` messages and processes acknowledgements.
-- **Receiver mode** (`isController = false`): listens for LoRa commands and toggles a relay. WiFi is disabled by default.
+- **Controller** – connects to WiFi and MQTT, publishes Home Assistant discovery messages and sends control commands to the receiver.
+- **Receiver** – listens for LoRa commands, toggles a relay and reports battery charging information back to the controller.
 
 ## Building
 
-1. Copy `heltec-controller-receiver/include/config-example.h` to `heltec-controller-receiver/include/config-private.h` and enter your WiFi and MQTT credentials.
-2. Build the firmware with PlatformIO:
+1. Copy `include/config-example.h` to `include/config-private.h` and update it with your WiFi and MQTT settings.
+2. Edit `src/main.cpp` and set `isController` to `true` for the controller firmware or `false` for the receiver.
+3. Build the firmware with PlatformIO:
 
 ```bash
-cd heltec-controller-receiver
 pio run
 ```
 
-The default environment targets the Heltec WiFi LoRa 32 V3 board.
-
 ## Usage
 
-Flash the compiled firmware to two boards. Set `isController` as required before compiling each device. Both devices display basic status information on the onboard OLED screen.
+Flash the compiled firmware to your ESP32-C3 boards. One board should be built with `isController = true`, the other with `false`. The controller connects to WiFi/MQTT and exchanges LoRa messages with the receiver. The receiver runs offline by default but can be asked to join WiFi for OTA updates.
 
-### MQTT Topics
+## MQTT Topics
 
 - `pump_station/switch/set` – payload `ON[:seconds]` or `OFF` to control the relay. If `seconds` is omitted the controller uses `DEFAULT_ON_TIME_SEC`.
-- `pump_station/switch/pulse` – payload is a number of seconds to turn the relay on once. The controller sends a `PULSE` LoRa message containing the duration and also publishes an `OFF` message when the time expires.
+- `pump_station/switch/pulse` – payload is the number of seconds to turn the relay on once.
 - `pump_station/tx_power/controller/set` – integer transmit power in dBm for the controller.
 - `pump_station/tx_power/receiver/set` – integer transmit power in dBm for the receiver.
+- `pump_station/status_freq/controller/set` – controller status interval in seconds.
+- `pump_station/status_freq/receiver/set` – receiver status interval in seconds.
 - `pump_station/wifi/connect` – ask the receiver to join the default WiFi network and enable OTA updates.
 - `pump_station/wifi/connect_custom` – payload `SSID:PASSWORD` to join a specific network for OTA.
 - `pump_station/wifi/disable` – disconnect the receiver from WiFi and disable OTA updates.
 - `pump_station/reboot` – instruct the receiver to reboot.
+- `pump_station/switch/state` – retained state topic used by the controller to resume the last relay state.
 
-### Home Assistant Discovery
+The controller publishes status updates to:
 
-The controller publishes MQTT discovery messages for easy integration with Home Assistant.
-It exposes a `switch` entity for basic on/off control and `number` entities named
-`Pump Pulse`, `Controller Tx Power` and `Receiver Tx Power`.
-It also publishes `sensor` entities `Controller Status` and `Receiver Status`
-which report the JSON data sent to `pump_station/status/controller` and
-`pump_station/status/receiver`. The receiver status now includes a battery
-percentage and a `charge` state of `CHARGING` or `DISCHARGING`.
-The controller enforces a minimum transmit power defined by `MIN_TX_OUTPUT_POWER`.
+- `pump_station/status/controller`
+- `pump_station/status/receiver`
+- `pump_station/status/receiver/battery_daily`
+- `pump_station/status/stats`
 
-On boot the controller sends a `STATUS` request to the receiver. The receiver
-responds with a `HELLO` message containing its current configuration (currently
-just transmit power). If the values differ from those the controller has
-persisted from previous MQTT commands it will resend the appropriate
-configuration messages.
+## Home Assistant Discovery
 
-When the controller connects to MQTT it processes any retained command on
-`pump_station/switch/set` so the relay resumes the last requested state. The
-controller waits briefly (up to two seconds) after subscribing for this retained
-message. If no retained command is found but the `pump_station/switch/state`
-topic is retained as `ON`, the controller issues a fresh `ON` command so the
-receiver resumes operation.
+When the controller connects to MQTT it publishes discovery messages so Home Assistant can automatically create entities. These include:
 
+- `switch` – pump on/off control.
+- `number` – `Pump Pulse`, `Controller Tx Power` and `Receiver Tx Power`.
+- `sensor` – `Controller Status`, `Receiver Status`, `Receiver Battery Daily` and `Pump Stats`.
 
-# esp32-c3-receiver
-
-The receiver-only component – no display but it reports battery charging information to the controller.
-
-## Building
-
-1. Copy `esp32-c3-receiver/include/config-example.h` to `esp32-c3-receiver/include/config-private.h` and update it with your WiFi and MQTT settings.
-2. Build the firmware with PlatformIO:
-
-```bash
-cd esp32-c3-receiver
-pio run
-```
+Each discovery message references the MQTT topics listed above.
