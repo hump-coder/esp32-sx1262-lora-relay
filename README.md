@@ -2,7 +2,7 @@
 
 A LoRa-based pump control system built around a generic ESP32-C3 board paired with an SX1262 module. The firmware can operate in two roles controlled by the `isController` flag in `src/main.cpp`:
 
-- **Controller** – connects to WiFi and MQTT, publishes Home Assistant discovery messages and sends control commands to the receiver.
+- **Controller** – connects to WiFi and MQTT (with OTA updates enabled), publishes Home Assistant discovery messages and sends control commands to the receiver.
 - **Receiver** – listens for LoRa commands, toggles a relay and reports battery charging information back to the controller.
 
 ## Building
@@ -17,7 +17,7 @@ pio run
 
 ## Usage
 
-Flash the compiled firmware to your ESP32-C3 boards. One board should be built with `isController = true`, the other with `false`. The controller connects to WiFi/MQTT and exchanges LoRa messages with the receiver. The receiver runs offline by default but can be asked to join WiFi for OTA updates.
+Flash the compiled firmware to your ESP32-C3 boards. One board should be built with `isController = true`, the other with `false`. The controller connects to WiFi/MQTT and exchanges LoRa messages with the receiver, and it is always ready for OTA updates. The receiver runs offline by default but can be asked to join WiFi for OTA updates.
 
 ## MQTT Topics
 
